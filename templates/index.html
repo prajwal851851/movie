@@ -61,15 +61,29 @@
     const modalSynopsis = document.getElementById('modal-synopsis');
     const serverList = document.getElementById('server-list');
     const statusEl = document.getElementById('status');
-    const player = videojs('my-player'); // Initialize Video.js player
+    const player = videojs('my-player');
+
+    // Get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 
     // Modal controls
     const span = document.getElementsByClassName("close")[0];
     span.onclick = () => { modal.style.display = "none"; player.pause(); }
     window.onclick = (event) => { if (event.target == modal) { modal.style.display = "none"; player.pause(); } }
 
-    // --- Main Functions ---
-    // --- Part 2 (Continued) ---
     async function fetchMovies() {
         try {
             statusEl.textContent = 'Fetching movies...';
@@ -85,13 +99,17 @@
 
     function displayMovies(movies) {
         movieList.innerHTML = '';
+        if (movies.length === 0) {
+            movieList.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No movies found. Click "Refresh All Movies" to start scraping.</p>';
+            return;
+        }
         movies.forEach(movie => {
-            if (!movie.poster_url) return; // Skip movies without posters
+            if (!movie.poster_url) return;
             const card = document.createElement('div');
             card.className = 'movie-card';
             card.innerHTML = `
                 <img src="${movie.poster_url}" alt="${movie.title}">
-                <h3>${movie.title} (${movie.year})</h3>
+                <h3>${movie.title} (${movie.year || 'N/A'})</h3>
             `;
             card.onclick = () => openWatchModal(movie);
             movieList.appendChild(card);
@@ -101,10 +119,9 @@
     async function openWatchModal(movie) {
         modalTitle.textContent = `${movie.title} (${movie.year})`;
         modalSynopsis.textContent = movie.synopsis || 'No synopsis available.';
-        serverList.innerHTML = ''; // Clear previous server list
+        serverList.innerHTML = '';
 
         try {
-            // Fetch fresh data for the selected movie
             const response = await fetch(`${API_BASE}/watch/${movie.imdb_id}/`);
             const movieData = await response.json();
             const links = movieData.links.filter(link => link.is_active);
@@ -113,14 +130,13 @@
                 const firstLink = links[0];
                 setupPlayer(firstLink.stream_url);
                 
-                // Display other servers as options
                 links.forEach(link => {
                     const li = document.createElement('li');
-                    li.innerHTML = `<a href="#" onclick="setupPlayer('${link.stream_url}')">${link.quality} (${link.language})</a>`;
+                    li.innerHTML = `<a href="#" onclick="setupPlayer('${link.stream_url}'); return false;">${link.quality} (${link.language})</a>`;
                     serverList.appendChild(li);
                 });
             } else {
-                player.src({}); // Clear player
+                player.src({});
                 serverList.innerHTML = '<li>No active streaming links found. Try refreshing.</li>';
             }
         } catch (error) {
@@ -131,8 +147,7 @@
     }
 
     function setupPlayer(streamUrl) {
-        // Determine video type based on URL extension
-        let type = 'video/mp4'; // Default to mp4
+        let type = 'video/mp4';
         if (streamUrl.includes('.m3u8')) {
             type = 'application/x-mpegURL';
         }
@@ -149,16 +164,28 @@
     async function refreshMovies() {
         statusEl.textContent = 'Triggering a full refresh... This may take a few minutes.';
         try {
-            await fetch(`${API_BASE}/movies/refresh/`, { method: 'POST' });
-            statusEl.textContent = 'Refresh started! Reload the page in a few minutes to see new movies.';
-            setTimeout(fetchMovies, 120000); // Automatically refresh list after 2 minutes
+            const csrftoken = getCookie('csrftoken');
+            const response = await fetch(`${API_BASE}/movies/refresh/`, { 
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                statusEl.textContent = 'Refresh started! Reload the page in a few minutes to see new movies.';
+                setTimeout(fetchMovies, 120000);
+            } else {
+                const error = await response.json();
+                statusEl.textContent = `Error: ${error.detail || 'Failed to start refresh'}`;
+            }
         } catch (error) {
             statusEl.textContent = 'Error triggering refresh.';
             console.error('Error:', error);
         }
     }
 
-    // --- Initial Load ---
     fetchMovies();
 </script>
 </body>

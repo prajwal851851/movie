@@ -3,7 +3,9 @@
 import os
 import sys
 import django
-
+# Add to scraper/scraper/settings.py
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 # Path to your Django project's settings file
 DJANGO_PROJECT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(DJANGO_PROJECT_PATH)
