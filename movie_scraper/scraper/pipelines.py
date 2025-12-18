@@ -1,9 +1,15 @@
 # scraper/scraper/pipelines.py
 from itemadapter import ItemAdapter
 from streaming.models import Movie, StreamingLink
+from twisted.internet import threads
 
 class DjangoItemPipeline:
     def process_item(self, item, spider):
+        # Use Twisted's deferToThread to run Django ORM in a separate thread
+        return threads.deferToThread(self._process_item_sync, item, spider)
+    
+    def _process_item_sync(self, item, spider):
+        """Synchronous processing of item in a separate thread"""
         adapter = ItemAdapter(item)
 
         # Create or update the Movie

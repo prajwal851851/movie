@@ -167,6 +167,7 @@
             <option value="fmovies-co.net">FMovies</option>
             <option value="makmoviestreaming.com">Mak Movies</option>
             <option value="archive.org">Archive.org</option>
+            <option value="goojara.to">Goojara</option>
         </select>
     </div>
     
@@ -185,9 +186,10 @@
     <h2 id="modal-title"></h2>
     <p id="modal-synopsis"></p>
     <div class="video-wrapper">
-        <video id="my-player" class="video-js vjs-default-skin" controls preload="auto" width="100%" height="400" data-setup='{"fluid": true}'>
+        <video id="my-player" class="video-js vjs-default-skin" controls preload="auto" width="100%" height="400" data-setup='{"fluid": true}' style="display:block;">
             <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video.</p>
         </video>
+        <iframe id="embed-player" style="display:none; width:100%; height:500px; border:none;" allowfullscreen></iframe>
     </div>
     <h3>Available Servers:</h3>
     <ul id="server-list" class="server-list"></ul>
@@ -288,7 +290,8 @@
             'fmovies-co.net': 'FM',
             'makmoviestreaming.com': 'MM',
             'archive.org': 'AR',
-            'fawesome.tv': 'FA'
+            'fawesome.tv': 'FA',
+            'goojara.to': 'GJ'
         };
         return names[site] || site;
     }
@@ -337,18 +340,38 @@
     }
 
     function setupPlayer(streamUrl) {
-        let type = 'video/mp4';
-        if (streamUrl.includes('.m3u8')) {
-            type = 'application/x-mpegURL';
-        }
+        const videoPlayer = document.getElementById('my-player');
+        const embedPlayer = document.getElementById('embed-player');
+        
+        // Check if URL is an embed page (myvidplay, wootly, etc.)
+        const embedDomains = ['myvidplay.com', 'wootly.ch', 'vidsrc', 'dood'];
+        const isEmbed = embedDomains.some(domain => streamUrl.includes(domain));
+        
+        if (isEmbed) {
+            // Use iframe for embed URLs
+            videoPlayer.style.display = 'none';
+            embedPlayer.style.display = 'block';
+            embedPlayer.src = streamUrl;
+            player.pause();
+        } else {
+            // Use video player for direct video URLs
+            videoPlayer.style.display = 'block';
+            embedPlayer.style.display = 'none';
+            embedPlayer.src = '';
+            
+            let type = 'video/mp4';
+            if (streamUrl.includes('.m3u8')) {
+                type = 'application/x-mpegURL';
+            }
 
-        player.src({
-            src: streamUrl,
-            type: type
-        });
-        player.ready(() => {
-            player.play().catch(e => console.log('Autoplay prevented:', e));
-        });
+            player.src({
+                src: streamUrl,
+                type: type
+            });
+            player.ready(() => {
+                player.play().catch(e => console.log('Autoplay prevented:', e));
+            });
+        }
     }
 
     async function refreshAllMovies() {
