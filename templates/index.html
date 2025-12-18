@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://*.ppzj-youtube.cfd https://myvidplay.com https://*.myvidplay.com https://wootly.ch https://*.wootly.ch https://vidsrc.to https://*.vidsrc.to https://vidsrc.me https://*.vidsrc.me https://dood.to https://*.dood.to https://dood.watch https://*.dood.watch https://goojara.to https://*.goojara.to;">
     <title>Movie Streamer</title>
     <!-- Video.js CSS -->
     <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
@@ -168,6 +169,7 @@
             <option value="makmoviestreaming.com">Mak Movies</option>
             <option value="archive.org">Archive.org</option>
             <option value="goojara.to">Goojara</option>
+            <option value="123movies.com">123Movies</option>
         </select>
     </div>
     
@@ -190,6 +192,10 @@
             <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video.</p>
         </video>
         <iframe id="embed-player" style="display:none; width:100%; height:500px; border:none;" allowfullscreen></iframe>
+        <div id="external-link" style="display:none; text-align:center; padding:40px; background:#2a2a2a; border-radius:8px;">
+            <p style="margin-bottom:20px; font-size:1.1em;">This movie is hosted on M4uHD.to and requires viewing on their site.</p>
+            <button onclick="openExternalLink()" style="background:#e50914; color:white; border:none; padding:15px 30px; font-size:1.1em; border-radius:4px; cursor:pointer;">🎬 Watch on M4uHD.to</button>
+        </div>
     </div>
     <h3>Available Servers:</h3>
     <ul id="server-list" class="server-list"></ul>
@@ -291,7 +297,8 @@
             'makmoviestreaming.com': 'MM',
             'archive.org': 'AR',
             'fawesome.tv': 'FA',
-            'goojara.to': 'GJ'
+            'goojara.to': 'GJ',
+            '123movies.com': '123'
         };
         return names[site] || site;
     }
@@ -329,7 +336,11 @@
                     serverList.appendChild(li);
                 });
             } else {
-                player.src({});
+                const videoPlayer = document.getElementById('my-player');
+                videoPlayer.style.display = 'none';
+                document.getElementById('embed-player').style.display = 'none';
+                document.getElementById('external-link').style.display = 'none';
+                player.pause();
                 serverList.innerHTML = '<li style="color: #888;">No active streaming links found. Try refreshing.</li>';
             }
         } catch (error) {
@@ -339,24 +350,49 @@
         modal.style.display = "block";
     }
 
+    let currentExternalUrl = '';
+    
+    function openExternalLink() {
+        if (currentExternalUrl) {
+            window.open(currentExternalUrl, '_blank');
+        }
+    }
+    
     function setupPlayer(streamUrl) {
         const videoPlayer = document.getElementById('my-player');
         const embedPlayer = document.getElementById('embed-player');
+        const externalLink = document.getElementById('external-link');
         
-        // Check if URL is an embed page (myvidplay, wootly, etc.)
-        const embedDomains = ['myvidplay.com', 'wootly.ch', 'vidsrc', 'dood'];
+        // M4uHD blocks iframe embedding, so open in new tab
+        const m4uhdDomains = ['ppzj-youtube.cfd'];
+        const isM4uhd = m4uhdDomains.some(domain => streamUrl.includes(domain));
+        
+        if (isM4uhd) {
+            // Show "Open in New Tab" button for M4uHD
+            videoPlayer.style.display = 'none';
+            embedPlayer.style.display = 'none';
+            externalLink.style.display = 'block';
+            currentExternalUrl = streamUrl;
+            player.pause();
+            return;
+        }
+        
+        // Check if URL is an embed page (myvidplay, wootly, goojara, etc.)
+        const embedDomains = ['myvidplay.com', 'wootly.ch', 'vidsrc', 'dood', 'goojara.to'];
         const isEmbed = embedDomains.some(domain => streamUrl.includes(domain));
         
         if (isEmbed) {
-            // Use iframe for embed URLs
+            // Use iframe for other embed URLs
             videoPlayer.style.display = 'none';
             embedPlayer.style.display = 'block';
+            externalLink.style.display = 'none';
             embedPlayer.src = streamUrl;
             player.pause();
         } else {
             // Use video player for direct video URLs
             videoPlayer.style.display = 'block';
             embedPlayer.style.display = 'none';
+            externalLink.style.display = 'none';
             embedPlayer.src = '';
             
             let type = 'video/mp4';

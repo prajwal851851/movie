@@ -30,8 +30,8 @@ class Command(BaseCommand):
             '--spider',
             type=str,
             default='archive',
-            choices=['archive', 'makemovies', 'goojara', 'all'],
-            help='Which spider to run (archive, makemovies, goojara, or all)'
+            choices=['archive', 'makemovies', 'goojara', 'm4uhd', 'all'],
+            help='Which spider to run (archive, makemovies, goojara, m4uhd, or all)'
         )
         parser.add_argument(
             '--limit',
@@ -39,10 +39,17 @@ class Command(BaseCommand):
             default=30,
             help='Maximum number of movies to scrape'
         )
+        parser.add_argument(
+            '--max-pages',
+            type=int,
+            default=5,
+            help='Maximum number of pages to scrape per URL (for pagination support)'
+        )
 
     def handle(self, *args, **options):
         spider_choice = options['spider']
         limit = options['limit']
+        max_pages = options['max_pages']
         
         self.stdout.write(self.style.SUCCESS(f'Starting {spider_choice} spider(s)...'))
         
@@ -53,6 +60,8 @@ class Command(BaseCommand):
         ImprovedMakemoviesSpider = improved_makemovies_module.ImprovedMakemoviesSpider
         goojara_module = importlib.import_module('scraper.spiders.goojara_spider')
         GoojaraSpider = goojara_module.GoojaraSpider
+        m4uhd_module = importlib.import_module('scraper.spiders.m4uhd_spider')
+        M4uhdSpider = m4uhd_module.M4uhdSpider
         
         try:
             settings = get_project_settings()
@@ -76,7 +85,11 @@ class Command(BaseCommand):
             
             if spider_choice == 'goojara' or spider_choice == 'all':
                 self.stdout.write('Adding Goojara spider...')
-                process.crawl(GoojaraSpider, limit=limit)
+                process.crawl(GoojaraSpider, limit=limit, max_pages=max_pages)
+            
+            if spider_choice == 'm4uhd' or spider_choice == 'all':
+                self.stdout.write('Adding M4uHD spider...')
+                process.crawl(M4uhdSpider, limit=limit)
             
             self.stdout.write(self.style.SUCCESS('\nStarting crawl...'))
             process.start()

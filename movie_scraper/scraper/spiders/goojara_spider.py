@@ -20,7 +20,12 @@ import re
 class GoojaraSpider(scrapy.Spider):
     name = 'goojara'
     allowed_domains = ['goojara.to', 'ww1.goojara.to']
-    start_urls = ['https://ww1.goojara.to/watch-movies']
+    # Start with trend discovery pages - these contain links to genre/year categories
+    start_urls = [
+        'https://ww1.goojara.to/',
+        'https://ww1.goojara.to/watch-trends-year',
+        'https://ww1.goojara.to/watch-trends-genre',
+    ]
     
     custom_settings = {
         'ROBOTSTXT_OBEY': False,
@@ -62,13 +67,18 @@ class GoojaraSpider(scrapy.Spider):
             self.driver.quit()
             self.logger.info('Selenium WebDriver closed')
 
-    def __init__(self, limit=50, *args, **kwargs):
+    def __init__(self, limit=200, max_pages=5, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.limit = int(limit)
+        self.max_pages = int(max_pages)
         self.count = 0
+        self.seen_urls = set()  # Track URLs we've already queued
+        self.pages_scraped = {}  # Track pages scraped per URL
+        self.category_urls_discovered = set()  # Track discovered category URLs
+        self.is_first_parse = True  # Flag to discover categories on first parse
 
     def parse(self, response):
-        """Parse movie listing page using Selenium"""
+        """Parse movie listing page using Selenium with category discovery and pagination"""
         self.logger.info(f'Loading page with Selenium: {response.url}')
         
         try:
@@ -83,20 +93,45 @@ class GoojaraSpider(scrapy.Spider):
                 encoding='utf-8'
             )
             
-            # Extract all links from the rendered page
+            # Extract all links
             all_links = sel_response.css('a::attr(href)').getall()
-            self.logger.info(f'Found {len(all_links)} total links on page')
+            self.logger.info(f'Found {len(all_links)} total links')
             
-            movie_links_found = 0
+            # If this is a trend discovery page, extract category URLs
+            if 'watch-trends' in response.url and self.is_first_parse:
+                self.is_first_parse = False
+                category_pattern = re.compile(r'/watch-trends-(genre|year)-[\w-]+$')
+                
+                for link in all_links:
+                    if link and category_pattern.search(link):
+                        full_url = response.urljoin(link)
+                        if full_url not in self.category_urls_discovered:
+                            self.category_urls_discovered.add(full_url)
+                            self.logger.info(f'Discovered category: {full_url}')
+                            # Queue category page for scraping
+                            yield scrapy.Request(
+                                url=full_url,
+                                callback=self.parse,
+                                dont_filter=True
+                            )
+            
+            # Find and queue movie links
+            movies_found = 0
             for link in all_links:
                 if self.count >= self.limit:
                     self.logger.info(f'Reached limit of {self.limit} movies')
                     return
                 
-                # Filter for movie detail pages (pattern: /mXXXXX - 5-7 alphanumeric chars)
+                # Filter for movie detail pages
                 if link and re.match(r'^/m[a-zA-Z0-9]{5,7}$', link):
-                    movie_links_found += 1
                     full_url = response.urljoin(link)
+                    
+                    # Skip if already seen
+                    if full_url in self.seen_urls:
+                        continue
+                    
+                    self.seen_urls.add(full_url)
+                    movies_found += 1
                     self.count += 1
                     self.logger.info(f'Queuing movie {self.count}: {full_url}')
                     yield scrapy.Request(
@@ -105,7 +140,25 @@ class GoojaraSpider(scrapy.Spider):
                         dont_filter=True
                     )
             
-            self.logger.info(f'Found {movie_links_found} movie links matching pattern')
+            self.logger.info(f'Found {movies_found} new movies (Total: {self.count}/{self.limit})')
+            
+            # Try pagination for category pages
+            if 'watch-trends-' in response.url and movies_found > 0 and self.count < self.limit:
+                base_url = response.url.split('?')[0]
+                if base_url not in self.pages_scraped:
+                    self.pages_scraped[base_url] = 0
+                
+                current_page = self.pages_scraped[base_url]
+                if current_page < self.max_pages:
+                    next_page = current_page + 1
+                    next_url = f"{base_url}?page={next_page}"
+                    self.pages_scraped[base_url] = next_page
+                    self.logger.info(f'Attempting pagination: {next_url}')
+                    yield scrapy.Request(
+                        url=next_url,
+                        callback=self.parse,
+                        dont_filter=True
+                    )
             
         except Exception as e:
             self.logger.error(f'Error parsing with Selenium: {e}')
