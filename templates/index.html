@@ -11,27 +11,171 @@
         body { font-family: Arial, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: auto; }
         h1, h2 { color: #ffffff; }
+        .controls { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .controls button { 
+            background-color: #e50914; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .controls button:hover { background-color: #f40612; }
+        .controls select {
+            padding: 10px;
+            background-color: #2a2a2a;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+        .stats {
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-label { font-size: 0.9em; color: #888; }
+        .stat-value { font-size: 1.5em; font-weight: bold; color: #e50914; }
         .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .movie-card { background-color: #1e1e1e; border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+        .movie-card { 
+            background-color: #1e1e1e; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            cursor: pointer; 
+            transition: transform 0.2s;
+            position: relative;
+        }
         .movie-card:hover { transform: scale(1.05); }
         .movie-card img { width: 100%; height: 300px; object-fit: cover; }
         .movie-card h3 { padding: 10px; font-size: 1rem; margin: 0; }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
-        .modal-content { background-color: #1e1e1e; margin: 5% auto; padding: 20px; border: 1px solid #444; width: 90%; max-width: 900px; }
-        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .movie-source {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(229, 9, 20, 0.9);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.8); 
+        }
+        .modal-content { 
+            background-color: #1e1e1e; 
+            margin: 5% auto; 
+            padding: 20px; 
+            border: 1px solid #444; 
+            width: 90%; 
+            max-width: 900px;
+            border-radius: 8px;
+        }
+        .close { 
+            color: #aaa; 
+            float: right; 
+            font-size: 28px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
         .close:hover { color: white; }
         .video-wrapper { margin-top: 20px; }
-        #status { margin-top: 10px; color: #f0f0f0; }
+        #status { 
+            margin-top: 10px; 
+            padding: 10px;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            color: #f0f0f0; 
+        }
+        .server-list {
+            list-style: none;
+            padding: 0;
+        }
+        .server-list li {
+            margin: 5px 0;
+        }
+        .server-list a {
+            color: #e50914;
+            text-decoration: none;
+            padding: 5px 10px;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .server-list a:hover {
+            background-color: #3a3a3a;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+        }
+        .filter-info {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>My Movie Aggregator</h1>
-    <button onclick="refreshMovies()">Refresh All Movies</button>
+    <h1>🎬 Movie Aggregator</h1>
+    
+    <div class="stats" id="stats">
+        <div class="stat-item">
+            <span class="stat-label">Total Movies</span>
+            <span class="stat-value" id="total-movies">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">With Links</span>
+            <span class="stat-value" id="movies-with-links">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Sources</span>
+            <span class="stat-value" id="total-sources">0</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="refreshAllMovies()">🔄 Refresh All Sites</button>
+        <select id="site-select" onchange="refreshSingleSite()">
+            <option value="">Refresh Single Site...</option>
+            <option value="movietreasures">Movie Treasures</option>
+            <option value="fmovies">FMovies</option>
+            <option value="makemovies">Mak Movies</option>
+            <option value="simple_movies">Simple Movies</option>
+        </select>
+        <select id="filter-select" onchange="filterMovies()">
+            <option value="">All Sources</option>
+            <option value="movietreasures.org">Movie Treasures</option>
+            <option value="fmovies-co.net">FMovies</option>
+            <option value="makmoviestreaming.com">Mak Movies</option>
+            <option value="archive.org">Archive.org</option>
+        </select>
+    </div>
+    
     <p id="status"></p>
+    <div class="filter-info" id="filter-info"></div>
     <hr>
-    <div id="movie-list" class="movie-grid"></div>
+    <div id="movie-list" class="movie-grid">
+        <div class="loading">Loading movies...</div>
+    </div>
 </div>
 
 <!-- The Modal for watching a movie -->
@@ -45,8 +189,8 @@
             <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video.</p>
         </video>
     </div>
-    <h3>Other Servers:</h3>
-    <ul id="server-list"></ul>
+    <h3>Available Servers:</h3>
+    <ul id="server-list" class="server-list"></ul>
   </div>
 </div>
 
@@ -61,7 +205,10 @@
     const modalSynopsis = document.getElementById('modal-synopsis');
     const serverList = document.getElementById('server-list');
     const statusEl = document.getElementById('status');
+    const filterInfo = document.getElementById('filter-info');
     const player = videojs('my-player');
+    
+    let allMovies = [];
 
     // Get CSRF token from cookie
     function getCookie(name) {
@@ -84,40 +231,83 @@
     span.onclick = () => { modal.style.display = "none"; player.pause(); }
     window.onclick = (event) => { if (event.target == modal) { modal.style.display = "none"; player.pause(); } }
 
+    async function fetchStats() {
+        try {
+            const response = await fetch(`${API_BASE}/movies/stats/`);
+            const stats = await response.json();
+            
+            document.getElementById('total-movies').textContent = stats.total_movies || 0;
+            document.getElementById('movies-with-links').textContent = stats.movies_with_links || 0;
+            document.getElementById('total-sources').textContent = Object.keys(stats.movies_by_site || {}).length;
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        }
+    }
+
     async function fetchMovies() {
         try {
             statusEl.textContent = 'Fetching movies...';
             const response = await fetch(`${API_BASE}/movies/`);
-            const movies = await response.json();
-            statusEl.textContent = `Found ${movies.length} movies.`;
-            displayMovies(movies);
+            allMovies = await response.json();
+            statusEl.textContent = `Found ${allMovies.length} movies.`;
+            displayMovies(allMovies);
+            fetchStats();
         } catch (error) {
             statusEl.textContent = 'Error fetching movies.';
             console.error('Error:', error);
+            movieList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #e50914;">Error loading movies. Please try again.</p>';
         }
     }
 
     function displayMovies(movies) {
         movieList.innerHTML = '';
         if (movies.length === 0) {
-            movieList.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No movies found. Click "Refresh All Movies" to start scraping.</p>';
+            movieList.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No movies found. Click "Refresh All Sites" to start scraping.</p>';
             return;
         }
         movies.forEach(movie => {
             if (!movie.poster_url) return;
             const card = document.createElement('div');
             card.className = 'movie-card';
+            
+            const sourceName = getSourceName(movie.source_site);
+            
             card.innerHTML = `
                 <img src="${movie.poster_url}" alt="${movie.title}">
-                <h3>${movie.title} (${movie.year || 'N/A'})</h3>
+                <div class="movie-source">${sourceName}</div>
+                <h3>${movie.title} ${movie.year ? `(${movie.year})` : ''}</h3>
             `;
             card.onclick = () => openWatchModal(movie);
             movieList.appendChild(card);
         });
     }
 
+    function getSourceName(site) {
+        const names = {
+            'movietreasures.org': 'MT',
+            'fmovies-co.net': 'FM',
+            'makmoviestreaming.com': 'MM',
+            'archive.org': 'AR',
+            'fawesome.tv': 'FA'
+        };
+        return names[site] || site;
+    }
+
+    function filterMovies() {
+        const filter = document.getElementById('filter-select').value;
+        if (!filter) {
+            displayMovies(allMovies);
+            filterInfo.textContent = '';
+            return;
+        }
+        
+        const filtered = allMovies.filter(m => m.source_site === filter);
+        displayMovies(filtered);
+        filterInfo.textContent = `Showing ${filtered.length} movies from ${getSourceName(filter)}`;
+    }
+
     async function openWatchModal(movie) {
-        modalTitle.textContent = `${movie.title} (${movie.year})`;
+        modalTitle.textContent = `${movie.title} ${movie.year ? `(${movie.year})` : ''}`;
         modalSynopsis.textContent = movie.synopsis || 'No synopsis available.';
         serverList.innerHTML = '';
 
@@ -130,18 +320,18 @@
                 const firstLink = links[0];
                 setupPlayer(firstLink.stream_url);
                 
-                links.forEach(link => {
+                links.forEach((link, index) => {
                     const li = document.createElement('li');
-                    li.innerHTML = `<a href="#" onclick="setupPlayer('${link.stream_url}'); return false;">${link.quality} (${link.language})</a>`;
+                    li.innerHTML = `<a href="#" onclick="setupPlayer('${link.stream_url}'); return false;">Server ${index + 1} - ${link.quality} (${link.language})</a>`;
                     serverList.appendChild(li);
                 });
             } else {
                 player.src({});
-                serverList.innerHTML = '<li>No active streaming links found. Try refreshing.</li>';
+                serverList.innerHTML = '<li style="color: #888;">No active streaming links found. Try refreshing.</li>';
             }
         } catch (error) {
             console.error('Error fetching movie details:', error);
-            serverList.innerHTML = '<li>Could not load streaming links.</li>';
+            serverList.innerHTML = '<li style="color: #e50914;">Could not load streaming links.</li>';
         }
         modal.style.display = "block";
     }
@@ -157,12 +347,14 @@
             type: type
         });
         player.ready(() => {
-            player.play();
+            player.play().catch(e => console.log('Autoplay prevented:', e));
         });
     }
 
-    async function refreshMovies() {
-        statusEl.textContent = 'Triggering a full refresh... This may take a few minutes.';
+    async function refreshAllMovies() {
+        statusEl.textContent = 'Triggering a full refresh... This may take several minutes.';
+        statusEl.style.backgroundColor = '#2a5c2a';
+        
         try {
             const csrftoken = getCookie('csrftoken');
             const response = await fetch(`${API_BASE}/movies/refresh/`, { 
@@ -174,18 +366,66 @@
             });
             
             if (response.ok) {
-                statusEl.textContent = 'Refresh started! Reload the page in a few minutes to see new movies.';
-                setTimeout(fetchMovies, 120000);
+                const data = await response.json();
+                statusEl.textContent = `${data.status} ${data.message}`;
+                setTimeout(() => {
+                    fetchMovies();
+                    statusEl.style.backgroundColor = '#2a2a2a';
+                }, 120000);
             } else {
                 const error = await response.json();
                 statusEl.textContent = `Error: ${error.detail || 'Failed to start refresh'}`;
+                statusEl.style.backgroundColor = '#5c2a2a';
             }
         } catch (error) {
             statusEl.textContent = 'Error triggering refresh.';
+            statusEl.style.backgroundColor = '#5c2a2a';
             console.error('Error:', error);
         }
     }
 
+    async function refreshSingleSite() {
+        const select = document.getElementById('site-select');
+        const site = select.value;
+        
+        if (!site) return;
+        
+        statusEl.textContent = `Triggering refresh for ${site}... This may take a few minutes.`;
+        statusEl.style.backgroundColor = '#2a5c2a';
+        
+        try {
+            const csrftoken = getCookie('csrftoken');
+            const response = await fetch(`${API_BASE}/movies/refresh-site/`, { 
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ site: site })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                statusEl.textContent = `${data.status} ${data.message}`;
+                setTimeout(() => {
+                    fetchMovies();
+                    statusEl.style.backgroundColor = '#2a2a2a';
+                }, 60000);
+            } else {
+                const error = await response.json();
+                statusEl.textContent = `Error: ${error.error || 'Failed to start refresh'}`;
+                statusEl.style.backgroundColor = '#5c2a2a';
+            }
+        } catch (error) {
+            statusEl.textContent = 'Error triggering refresh.';
+            statusEl.style.backgroundColor = '#5c2a2a';
+            console.error('Error:', error);
+        }
+        
+        select.value = '';
+    }
+
+    // Initial load
     fetchMovies();
 </script>
 </body>
