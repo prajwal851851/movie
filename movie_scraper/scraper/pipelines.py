@@ -26,15 +26,25 @@ class DjangoItemPipeline:
             defaults=movie_defaults
         )
 
-        # Create or update the StreamingLink
+        # Create or update the StreamingLink with server_name
         if adapter.get('stream_url'):
             link_defaults = {
+                'server_name': adapter.get('server_name', 'Unknown'),
                 'quality': adapter.get('quality'),
                 'language': adapter.get('language'),
+                'is_active': True,
+                'error_message': '',
+                'check_count': 0,
             }
-            StreamingLink.objects.update_or_create(
+            link, link_created = StreamingLink.objects.update_or_create(
                 movie=movie,
                 stream_url=adapter.get('stream_url'),
                 defaults=link_defaults
             )
+            
+            if link_created:
+                spider.logger.info(f'Created new {link.server_name} link for {movie.title}')
+            else:
+                spider.logger.info(f'Updated {link.server_name} link for {movie.title}')
+        
         return item

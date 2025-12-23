@@ -10,5 +10,6 @@ class MovieItem(scrapy.Item):
     source_url = scrapy.Field()
     source_site = scrapy.Field()
     stream_url = scrapy.Field()
+    server_name = scrapy.Field()
     quality = scrapy.Field()
     language = scrapy.Field()

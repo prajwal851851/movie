@@ -3,11 +3,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 from django.core.management import call_command
 from django.shortcuts import get_object_or_404
 from .models import Movie
 from .serializers import MovieSerializer
 import threading
+
+class MovieCursorPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -16,6 +22,7 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Movie.objects.all().prefetch_related('links')
     serializer_class = MovieSerializer
     lookup_field = 'imdb_id'
+    pagination_class = MovieCursorPagination
 
     @action(detail=False, methods=['post'], url_path='refresh')
     def refresh_all(self, request):

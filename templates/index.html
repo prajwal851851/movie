@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://*.ppzj-youtube.cfd https://myvidplay.com https://*.myvidplay.com https://wootly.ch https://*.wootly.ch https://vidsrc.to https://*.vidsrc.to https://vidsrc.me https://*.vidsrc.me https://dood.to https://*.dood.to https://dood.watch https://*.dood.watch https://goojara.to https://*.goojara.to;">
+    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://*.ppzj-youtube.cfd https://myvidplay.com https://*.myvidplay.com https://wootly.ch https://*.wootly.ch https://vidsrc.to https://*.vidsrc.to https://vidsrc.me https://*.vidsrc.me https://vidsrc-embed.ru https://*.vidsrc-embed.ru https://luluvdo.com https://*.luluvdo.com https://dood.to https://*.dood.to https://dood.watch https://*.dood.watch https://doodstream.com https://*.doodstream.com https://goojara.to https://*.goojara.to;">
     <title>Movie Streamer</title>
     <!-- Video.js CSS -->
     <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
@@ -171,6 +171,9 @@
             <option value="goojara.to">Goojara</option>
             <option value="123movies.com">123Movies</option>
         </select>
+        <select id="year-filter" onchange="filterMovies()">
+            <option value="">All Years</option>
+        </select>
     </div>
     
     <p id="status"></p>
@@ -252,18 +255,92 @@
         }
     }
 
-    async function fetchMovies() {
+    let currentPage = 1;
+    let nextPageUrl = null;
+    let previousPageUrl = null;
+
+    async function fetchMovies(pageUrl = null) {
         try {
             statusEl.textContent = 'Fetching movies...';
-            const response = await fetch(`${API_BASE}/movies/`);
-            allMovies = await response.json();
-            statusEl.textContent = `Found ${allMovies.length} movies.`;
+            const url = pageUrl || `${API_BASE}/movies/`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            allMovies = data.results || [];
+            nextPageUrl = data.next;
+            previousPageUrl = data.previous;
+            currentPage = pageUrl ? getPageFromUrl(pageUrl) : 1;
+            
+            statusEl.textContent = `Found ${data.count || allMovies.length} movies (page ${currentPage}).`;
+            populateYearFilter();
             displayMovies(allMovies);
+            updatePaginationControls(data);
             fetchStats();
         } catch (error) {
             statusEl.textContent = 'Error fetching movies.';
             console.error('Error:', error);
             movieList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #e50914;">Error loading movies. Please try again.</p>';
+        }
+    }
+
+    function getPageFromUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            return parseInt(urlObj.searchParams.get('page')) || 1;
+        } catch {
+            return 1;
+        }
+    }
+
+    function updatePaginationControls(data) {
+        const controls = document.querySelector('.controls');
+        let paginationDiv = document.getElementById('pagination-controls');
+        
+        if (!paginationDiv) {
+            paginationDiv = document.createElement('div');
+            paginationDiv.id = 'pagination-controls';
+            paginationDiv.style.display = 'flex';
+            paginationDiv.style.gap = '10px';
+            paginationDiv.style.alignItems = 'center';
+            controls.appendChild(paginationDiv);
+        }
+        
+        paginationDiv.innerHTML = '';
+        
+        if (data.previous) {
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '⬅️ Previous';
+            prevBtn.onclick = () => fetchMovies(data.previous);
+            paginationDiv.appendChild(prevBtn);
+        }
+        
+        if (data.next) {
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Next ➡️';
+            nextBtn.onclick = () => fetchMovies(data.next);
+            paginationDiv.appendChild(nextBtn);
+        }
+        
+        if (data.count) {
+            const pageInfo = document.createElement('span');
+            pageInfo.textContent = `Page ${currentPage} of ${Math.ceil(data.count / 10)} (${data.count} total movies)`;
+            pageInfo.style.color = '#888';
+            pageInfo.style.fontSize = '0.9em';
+            paginationDiv.appendChild(pageInfo);
+        }
+    }
+
+    function populateYearFilter() {
+        const yearFilter = document.getElementById('year-filter');
+        
+        yearFilter.innerHTML = '<option value="">All Years</option>';
+        
+        // Add years from 2021 to 2025
+        for (let year = 2025; year >= 1990; year--) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            yearFilter.appendChild(option);
         }
     }
 
@@ -304,16 +381,23 @@
     }
 
     function filterMovies() {
-        const filter = document.getElementById('filter-select').value;
-        if (!filter) {
-            displayMovies(allMovies);
-            filterInfo.textContent = '';
+        const sourceFilter = document.getElementById('filter-select').value;
+        const yearFilter = document.getElementById('year-filter').value;
+        
+        // For now, just show a message that filtering requires reloading all movies
+        // In a full implementation, you'd want to either:
+        // 1. Filter on the backend with query parameters
+        // 2. Load all movies and filter client-side
+        
+        if (sourceFilter || yearFilter) {
+            statusEl.textContent = 'Filtering is not available with pagination. Please clear filters and use search.';
+            document.getElementById('filter-select').value = '';
+            document.getElementById('year-filter').value = '';
             return;
         }
         
-        const filtered = allMovies.filter(m => m.source_site === filter);
-        displayMovies(filtered);
-        filterInfo.textContent = `Showing ${filtered.length} movies from ${getSourceName(filter)}`;
+        displayMovies(allMovies);
+        filterInfo.textContent = '';
     }
 
     async function openWatchModal(movie) {
@@ -332,7 +416,8 @@
                 
                 links.forEach((link, index) => {
                     const li = document.createElement('li');
-                    li.innerHTML = `<a href="#" onclick="setupPlayer('${link.stream_url}'); return false;">Server ${index + 1} - ${link.quality} (${link.language})</a>`;
+                    const serverName = link.server_name || 'Server ' + (index + 1);
+                    li.innerHTML = `<a href="#" onclick="setupPlayer('${link.stream_url}'); return false;">${serverName} - ${link.quality} (${link.language})</a>`;
                     serverList.appendChild(li);
                 });
             } else {
@@ -377,8 +462,8 @@
             return;
         }
         
-        // Check if URL is an embed page (myvidplay, wootly, goojara, etc.)
-        const embedDomains = ['myvidplay.com', 'wootly.ch', 'vidsrc', 'dood', 'goojara.to'];
+        // Check if URL is an embed page (myvidplay, wootly, goojara, luluvdo, vidsrc, dood, etc.)
+        const embedDomains = ['myvidplay.com', 'wootly.ch', 'vidsrc', 'dood', 'luluvdo.com', 'goojara.to'];
         const isEmbed = embedDomains.some(domain => streamUrl.includes(domain));
         
         if (isEmbed) {

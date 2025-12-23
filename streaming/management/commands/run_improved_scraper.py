@@ -30,8 +30,8 @@ class Command(BaseCommand):
             '--spider',
             type=str,
             default='archive',
-            choices=['archive', 'makemovies', 'goojara', 'm4uhd', 'all'],
-            help='Which spider to run (archive, makemovies, goojara, m4uhd, or all)'
+            choices=['archive', 'makemovies', 'goojara', 'goojara_v2', 'm4uhd', 'all'],
+            help='Which spider to run (archive, makemovies, goojara, goojara_v2, m4uhd, or all)'
         )
         parser.add_argument(
             '--limit',
@@ -56,12 +56,18 @@ class Command(BaseCommand):
         # Import spiders after paths are set
         working_archive_module = importlib.import_module('scraper.spiders.working_archive_spider')
         WorkingArchiveSpider = working_archive_module.WorkingArchiveSpider
+
         improved_makemovies_module = importlib.import_module('scraper.spiders.improved_makemovies_spider')
         ImprovedMakemoviesSpider = improved_makemovies_module.ImprovedMakemoviesSpider
+
         goojara_module = importlib.import_module('scraper.spiders.goojara_spider')
         GoojaraSpider = goojara_module.GoojaraSpider
-        m4uhd_module = importlib.import_module('scraper.spiders.m4uhd_spider')
-        M4uhdSpider = m4uhd_module.M4uhdSpider
+
+        goojara_v2_module = importlib.import_module('scraper.spiders.goojara_spider_v2')
+        GoojaraSpiderV2 = goojara_v2_module.GoojaraSpiderV2
+
+        #m4uhd_module = importlib.import_module('scraper.spiders.m4uhd_spider')
+        #M4uhdSpider = m4uhd_module.M4uhdSpider
         
         try:
             settings = get_project_settings()
@@ -86,6 +92,10 @@ class Command(BaseCommand):
             if spider_choice == 'goojara' or spider_choice == 'all':
                 self.stdout.write('Adding Goojara spider...')
                 process.crawl(GoojaraSpider, limit=limit, max_pages=max_pages)
+            
+            if spider_choice == 'goojara_v2':
+                self.stdout.write('Adding Goojara V2 spider (Multi-Server + Smart Scraping)...')
+                process.crawl(GoojaraSpiderV2, limit=limit, max_pages=max_pages, rescrape_broken=True)
             
             if spider_choice == 'm4uhd' or spider_choice == 'all':
                 self.stdout.write('Adding M4uHD spider...')

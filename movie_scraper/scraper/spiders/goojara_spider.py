@@ -17,13 +17,29 @@ from scraper.items import MovieItem
 import time
 import re
 
+import os
+import django
+from streaming.models import Movie
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'movie_scrape.settings')
+django.setup()
+
 class GoojaraSpider(scrapy.Spider):
     name = 'goojara'
     allowed_domains = ['goojara.to', 'ww1.goojara.to']
-    # Start with trend discovery pages - these contain links to genre/year categories
+    # Start with series first, then movies
     start_urls = [
-        'https://ww1.goojara.to/',
-        'https://ww1.goojara.to/watch-trends-year',
+        'https://ww1.goojara.to/watch-series',
+        'https://ww1.goojara.to/watch-movies-genre-Sci-Fi',
+        'https://ww1.goojara.to/watch-trends-year-2025',
+        'https://ww1.goojara.to/watch-trends-year-2024',
+        'https://ww1.goojara.to/watch-trends-year-2023',
+        'https://ww1.goojara.to/watch-trends-year-2022',
+        'https://ww1.goojara.to/watch-trends-year-2021',
+        'https://ww1.goojara.to/watch-trends-year-2020',
+        'https://ww1.goojara.to/watch-trends-year-2019',
+        'https://ww1.goojara.to/watch-trends-year-2018',
+        'https://ww1.goojara.to/watch-trends-year-2017',
         'https://ww1.goojara.to/watch-trends-genre',
     ]
     
@@ -51,6 +67,13 @@ class GoojaraSpider(scrapy.Spider):
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_argument('--disable-extensions')
+        chrome_options.add_argument('--disable-plugins')
+        chrome_options.add_argument('--disable-images')
+        # Enable JavaScript for series pages to load dynamic content
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
         chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
         
         try:
@@ -76,6 +99,34 @@ class GoojaraSpider(scrapy.Spider):
         self.pages_scraped = {}  # Track pages scraped per URL
         self.category_urls_discovered = set()  # Track discovered category URLs
         self.is_first_parse = True  # Flag to discover categories on first parse
+        self.existing_movie_urls = set()
+        self._load_existing_movies()
+
+    def _extract_quality(self, link_text):
+        """Extract quality from link text"""
+        if not link_text:
+            return 'SD'
+        
+        text_upper = link_text.upper()
+        if 'HD' in text_upper or '1080' in text_upper:
+            return 'HD'
+        elif '720' in text_upper:
+            return '720p'
+        elif 'DVD' in text_upper:
+            return 'DVD'
+        else:
+            return 'SD'
+
+    def _load_existing_movies(self):
+        """Load existing movies from the database to skip already scraped ones"""
+        try:
+            movies = Movie.objects.all().values_list('source_url', flat=True)
+            for url in movies:
+                if url:
+                    self.existing_movie_urls.add(url)
+            self.logger.info(f'Loaded {len(self.existing_movie_urls)} existing movies from DB')
+        except Exception as e:
+            self.logger.warning(f'Could not load existing movies: {e}')
 
     def parse(self, response):
         """Parse movie listing page using Selenium with category discovery and pagination"""
@@ -115,32 +166,46 @@ class GoojaraSpider(scrapy.Spider):
                                 dont_filter=True
                             )
             
-            # Find and queue movie links
+            # Find and queue movie/series links
             movies_found = 0
             for link in all_links:
                 if self.count >= self.limit:
-                    self.logger.info(f'Reached limit of {self.limit} movies')
+                    self.logger.info(f'Reached limit of {self.limit} movies/series')
                     return
                 
-                # Filter for movie detail pages
-                if link and re.match(r'^/m[a-zA-Z0-9]{5,7}$', link):
+                # Filter for movie/series detail pages
+                if link and re.match(r'^/(m|t)[a-zA-Z0-9]{5,7}$', link):
                     full_url = response.urljoin(link)
                     
                     # Skip if already seen
                     if full_url in self.seen_urls:
                         continue
+                    # Skip if movie already exists in DB
+                    if full_url in self.existing_movie_urls:
+                        self.logger.info(f'Skipping already scraped movie/series: {full_url}')
+                        continue
                     
                     self.seen_urls.add(full_url)
                     movies_found += 1
                     self.count += 1
-                    self.logger.info(f'Queuing movie {self.count}: {full_url}')
-                    yield scrapy.Request(
-                        url=full_url,
-                        callback=self.parse_movie,
-                        dont_filter=True
-                    )
+                    
+                    # Determine if it's a series (t prefix) or movie (m prefix)
+                    if link.startswith('/t'):
+                        self.logger.info(f'Queuing series {self.count}: {full_url}')
+                        yield scrapy.Request(
+                            url=full_url,
+                            callback=self.parse_series,
+                            dont_filter=True
+                        )
+                    else:
+                        self.logger.info(f'Queuing movie {self.count}: {full_url}')
+                        yield scrapy.Request(
+                            url=full_url,
+                            callback=self.parse_movie,
+                            dont_filter=True
+                        )
             
-            self.logger.info(f'Found {movies_found} new movies (Total: {self.count}/{self.limit})')
+            self.logger.info(f'Found {movies_found} new movies/series (Total: {self.count}/{self.limit})')
             
             # Try pagination for category pages
             if 'watch-trends-' in response.url and movies_found > 0 and self.count < self.limit:
@@ -162,6 +227,118 @@ class GoojaraSpider(scrapy.Spider):
             
         except Exception as e:
             self.logger.error(f'Error parsing with Selenium: {e}')
+            import traceback
+            self.logger.error(traceback.format_exc())
+
+    def parse_series(self, response):
+        """Parse series page and extract seasons and episodes"""
+        self.logger.info(f'Parsing series: {response.url}')
+        
+        try:
+            self.driver.get(response.url)
+            time.sleep(5)  # Longer wait for dynamic content
+            
+            # Scroll to help load dynamic content
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            self.driver.execute_script("window.scrollTo(0, 0);")
+            time.sleep(1)
+            
+            # Get rendered HTML
+            html = self.driver.page_source
+            sel_response = HtmlResponse(
+                url=response.url,
+                body=html.encode('utf-8'),
+                encoding='utf-8'
+            )
+            
+            # Extract series information
+            series_title = sel_response.css('h1::text').get()
+            if not series_title:
+                self.logger.warning(f'No series title found for: {response.url}')
+                return
+                
+            self.logger.info(f'Processing series: {series_title.strip()}')
+            
+            # Look for season/episode links with multiple patterns
+            all_links = sel_response.css('a::attr(href)').getall()
+            episodes_found = 0
+            
+            # Multiple patterns for episode links
+            episode_patterns = [
+                r'^/t[a-zA-Z0-9]{5,7}$',  # Standard episode pattern
+                r'^/e[a-zA-Z0-9]{5,7}$',  # Alternative episode pattern
+                r'^/s\d+e\d+',            # Season/episode format like /s1e1
+                r'/season/\d+',            # Season links
+                r'/episode/\d+',           # Episode links
+            ]
+            
+            # Also look for episode links by text content
+            episode_text_patterns = [
+                r'episode\s*\d+',
+                r'season\s*\d+',
+                r'e\d+',
+                r's\d+',
+                r'watch\s+episode',
+                r'play\s+episode'
+            ]
+            
+            for link in all_links:
+                if self.count >= self.limit:
+                    self.logger.info(f'Reached limit of {self.limit} movies/series')
+                    return
+                
+                if not link:
+                    continue
+                    
+                full_url = response.urljoin(link)
+                
+                # Skip if already seen
+                if full_url in self.seen_urls:
+                    continue
+                # Skip if already exists in DB
+                if full_url in self.existing_movie_urls:
+                    self.logger.info(f'Skipping already scraped episode: {full_url}')
+                    continue
+                
+                # Check if link matches episode patterns
+                is_episode = any(re.match(pattern, link) for pattern in episode_patterns)
+                
+                # Also check link text for episode indicators
+                link_text = ''
+                try:
+                    link_text = sel_response.css(f'a[href="{link}"]::text').get() or ''
+                    link_text = link_text.lower().strip()
+                except:
+                    pass
+                
+                is_episode_by_text = any(re.search(pattern, link_text) for pattern in episode_text_patterns)
+                
+                if is_episode or is_episode_by_text:
+                    self.seen_urls.add(full_url)
+                    episodes_found += 1
+                    self.count += 1
+                    
+                    self.logger.info(f'Queuing episode {self.count}: {full_url} ({link_text})')
+                    yield scrapy.Request(
+                        url=full_url,
+                        callback=self.parse_movie,  # Use same movie parser for episodes
+                        dont_filter=True
+                    )
+            
+            self.logger.info(f'Found {episodes_found} episodes for {series_title.strip()}')
+            
+            # If no episodes found, try to extract streaming links directly from series page
+            if episodes_found == 0:
+                self.logger.info(f'No episode links found, trying direct series streaming extraction')
+                yield scrapy.Request(
+                    url=response.url,
+                    callback=self.parse_movie,  # Try to extract streaming from series page
+                    dont_filter=True
+                )
+                
+        except Exception as e:
+            self.logger.error(f'Error parsing series page: {e}')
             import traceback
             self.logger.error(traceback.format_exc())
 
@@ -230,30 +407,31 @@ class GoojaraSpider(scrapy.Spider):
                 movie_page_url = self.driver.current_url
                 
                 # Try multiple links to find a working one
-                # Priority: dood > luluvdo > others (skip Wootly and Vidsrc as they don't work)
+                # Priority: dood > luluvdo > wootly > vidsrc > others
                 link_priority = []
                 for link_elem in stream_links:
                     link_text = link_elem.css('::text').get()
                     link_href = link_elem.css('::attr(href)').get()
                     if link_text and link_href:
                         text_lower = link_text.lower()
-                        # Skip Wootly and Vidsrc as they use embed pages that don't work
-                        if 'wootly' in text_lower or 'vidsrc' in text_lower:
-                            continue
-                        # Prioritize dood and luluvdo
+                        # Prioritize different streaming services
                         if 'dood' in text_lower:
                             priority = 0
                         elif 'luluvdo' in text_lower:
                             priority = 1
-                        else:
+                        elif 'wootly' in text_lower:
                             priority = 2
+                        elif 'vidsrc' in text_lower:
+                            priority = 3
+                        else:
+                            priority = 4
                         link_priority.append((priority, link_href, link_text))
                 
                 # Sort by priority
                 link_priority.sort(key=lambda x: x[0])
                 
                 if not link_priority:
-                    self.logger.warning(f'No suitable streaming links found (all were Wootly/Vidsrc)')
+                    self.logger.warning(f'No streaming links found')
                     return
                 
                 # Try first 3 links
@@ -274,19 +452,48 @@ class GoojaraSpider(scrapy.Spider):
                         full_link = response.urljoin(link_href)
                         self.logger.info(f'Navigating to: {link_text} - {full_link}')
                         
-                        self.driver.get(full_link)
-                        time.sleep(5)  # Wait for redirect
+                        # Special handling for Luluvdo to avoid connection issues
+                        if 'luluvdo' in link_text.lower():
+                            try:
+                                # Add user agent and headers for Luluvdo
+                                self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                                time.sleep(2)
+                                self.driver.get(full_link)
+                                time.sleep(8)  # Longer wait for Luluvdo
+                            except Exception as e:
+                                self.logger.warning(f'Luluvdo connection failed: {e}')
+                                # Try alternative approach for Luluvdo
+                                try:
+                                    # Use a more browser-like approach
+                                    self.driver.get(full_link)
+                                    time.sleep(10)
+                                    # Check if we got a valid URL
+                                    final_url = self.driver.current_url
+                                    if 'luluvdo.com' in final_url and len(final_url) > 30:
+                                        self.logger.info(f'Luluvdo URL extracted on retry: {final_url[:60]}...')
+                                        actual_stream_url = final_url
+                                        quality = self._extract_quality(link_text)
+                                        break
+                                    else:
+                                        continue
+                                except Exception as retry_e:
+                                    self.logger.warning(f'Luluvdo retry also failed: {retry_e}')
+                                    continue
+                        else:
+                            self.driver.get(full_link)
+                            time.sleep(5)  # Wait for redirect
                         
                         # Get the final URL after redirect
                         final_url = self.driver.current_url
                         self.logger.info(f'Final URL: {final_url}')
                         
                         # Check if it's a valid streaming URL
-                        invalid_patterns = ['goojara.to', '404', 'error', 'disable-devtool']
+                        invalid_patterns = ['goojara.to', '404', 'error', 'disable-devtool', 'refused', 'connection', 'timeout']
                         is_valid = (
                             final_url and 
                             len(final_url) > 20 and
-                            not any(pattern in final_url.lower() for pattern in invalid_patterns)
+                            not any(pattern in final_url.lower() for pattern in invalid_patterns) and
+                            not 'refused to connect' in final_url.lower()
                         )
                         
                         if is_valid:
