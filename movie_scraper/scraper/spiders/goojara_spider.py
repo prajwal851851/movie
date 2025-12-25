@@ -415,16 +415,12 @@ class GoojaraSpider(scrapy.Spider):
                     if link_text and link_href:
                         text_lower = link_text.lower()
                         # Prioritize different streaming services
-                        if 'dood' in text_lower:
+                        
+                        
+                        if 'wootly' in text_lower:
                             priority = 0
-                        elif 'luluvdo' in text_lower:
-                            priority = 1
-                        elif 'wootly' in text_lower:
-                            priority = 2
-                        elif 'vidsrc' in text_lower:
-                            priority = 3
                         else:
-                            priority = 4
+                            priority = 1
                         link_priority.append((priority, link_href, link_text))
                 
                 # Sort by priority

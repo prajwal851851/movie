@@ -6,8 +6,6 @@ from django.core.management.base import BaseCommand
 import importlib
 
 # Path Setup
-# Ensure DJANGO_PROJECT_ROOT points to the repository root (one level higher)
-# so the top-level `scraper` package (d:\movie_scrape\scraper) is importable.
 DJANGO_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 SCRAPY_PROJECT_PATH = os.path.join(DJANGO_PROJECT_ROOT, 'movie_scraper')
 
@@ -30,8 +28,8 @@ class Command(BaseCommand):
             '--spider',
             type=str,
             default='archive',
-            choices=['archive', 'makemovies', 'goojara', 'goojara_v2', 'm4uhd', 'all'],
-            help='Which spider to run (archive, makemovies, goojara, goojara_v2, m4uhd, or all)'
+            choices=['archive', 'makemovies', 'goojara', 'goojara_v2','sflix', 'oneflix_ultimate', 'all'],
+            help='Which spider to run (archive, makemovies, goojara, goojara_v2, m4uhd, oneflix_ultimate, or all)'
         )
         parser.add_argument(
             '--limit',
@@ -50,9 +48,9 @@ class Command(BaseCommand):
         spider_choice = options['spider']
         limit = options['limit']
         max_pages = options['max_pages']
-        
+
         self.stdout.write(self.style.SUCCESS(f'Starting {spider_choice} spider(s)...'))
-        
+
         # Import spiders after paths are set
         working_archive_module = importlib.import_module('scraper.spiders.working_archive_spider')
         WorkingArchiveSpider = working_archive_module.WorkingArchiveSpider
@@ -64,11 +62,19 @@ class Command(BaseCommand):
         GoojaraSpider = goojara_module.GoojaraSpider
 
         goojara_v2_module = importlib.import_module('scraper.spiders.goojara_spider_v2')
-        GoojaraSpiderV2 = goojara_v2_module.GoojaraSpiderV2
+        GoojaraSpiderV2 = goojara_v2_module.GoojaraSpiderFixed
+
+        # Import 1Flix spider
+        oneflix_module = importlib.import_module('scraper.spiders.oneflix_ultimate')
+        OneFlixUltimateSpider = oneflix_module.OneFlixUltimateSpider
+        
+        # FIX: Corrected the class name to match the definition in sflix_spider.py
+        sflix_module = importlib.import_module('scraper.spiders.sflix_spider')
+        SflixSpider = sflix_module.SflixSpider
 
         #m4uhd_module = importlib.import_module('scraper.spiders.m4uhd_spider')
         #M4uhdSpider = m4uhd_module.M4uhdSpider
-        
+
         try:
             settings = get_project_settings()
             settings.set('ROBOTSTXT_OBEY', False)
@@ -78,32 +84,37 @@ class Command(BaseCommand):
             settings.set('ITEM_PIPELINES', {
                 'scraper.pipelines.DjangoItemPipeline': 300,
             })
-            
+
             process = CrawlerProcess(settings)
-            
+
             if spider_choice == 'archive' or spider_choice == 'all':
                 self.stdout.write('Adding Archive.org spider...')
                 process.crawl(WorkingArchiveSpider, limit=limit)
-            
+
             if spider_choice == 'makemovies' or spider_choice == 'all':
                 self.stdout.write('Adding Makemovies spider...')
                 process.crawl(ImprovedMakemoviesSpider, limit=limit)
-            
+
             if spider_choice == 'goojara' or spider_choice == 'all':
                 self.stdout.write('Adding Goojara spider...')
                 process.crawl(GoojaraSpider, limit=limit, max_pages=max_pages)
-            
+
+            if spider_choice == 'sflix' or spider_choice == 'all':
+                self.stdout.write('Adding sflix spider...')
+                # FIX: Updated the variable name here to be consistent
+                process.crawl(SflixSpider, limit=limit, max_pages=max_pages)
+
             if spider_choice == 'goojara_v2':
                 self.stdout.write('Adding Goojara V2 spider (Multi-Server + Smart Scraping)...')
                 process.crawl(GoojaraSpiderV2, limit=limit, max_pages=max_pages, rescrape_broken=True)
-            
-            if spider_choice == 'm4uhd' or spider_choice == 'all':
-                self.stdout.write('Adding M4uHD spider...')
-                process.crawl(M4uhdSpider, limit=limit)
-            
+
+            if spider_choice == 'oneflix_ultimate' or spider_choice == 'all':
+                self.stdout.write('Adding 1Flix Ultimate spider (UpCloud/MegaCloud/VidCloud)...')
+                process.crawl(OneFlixUltimateSpider, limit=limit, max_pages=max_pages)
+
             self.stdout.write(self.style.SUCCESS('\nStarting crawl...'))
             process.start()
-            
+
             self.stdout.write(self.style.SUCCESS('\n✓ Scraping completed!'))
             self.stdout.write('Run "python manage.py runserver" and check http://localhost:8000/')
 

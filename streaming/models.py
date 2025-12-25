@@ -5,6 +5,11 @@ from django.db import models
 from django.db import models
 
 class Movie(models.Model):
+    CONTENT_TYPES = [
+        ('movie', 'Movie'),
+        ('series', 'Series'),
+    ]
+    
     imdb_id = models.CharField(max_length=20, unique=True, primary_key=True, help_text="e.g., tt0468569")
     title = models.CharField(max_length=255)
     year = models.IntegerField(null=True, blank=True)
@@ -13,6 +18,7 @@ class Movie(models.Model):
     # Store the original page we scraped this from, for re-scraping
     source_url = models.URLField(max_length=1000, blank=True)
     source_site = models.CharField(max_length=50, blank=True, help_text="e.g., makemoviestreaming.com")
+    content_type = models.CharField(max_length=10, choices=CONTENT_TYPES, default='movie', help_text="Movie or Series")
 
     def __str__(self):
         return f"{self.title} ({self.year})"

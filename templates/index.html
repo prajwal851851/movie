@@ -1,144 +1,49 @@
-<!-- movie_project/templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://*.ppzj-youtube.cfd https://myvidplay.com https://*.myvidplay.com https://wootly.ch https://*.wootly.ch https://vidsrc.to https://*.vidsrc.to https://vidsrc.me https://*.vidsrc.me https://vidsrc-embed.ru https://*.vidsrc-embed.ru https://luluvdo.com https://*.luluvdo.com https://dood.to https://*.dood.to https://dood.watch https://*.dood.watch https://doodstream.com https://*.doodstream.com https://goojara.to https://*.goojara.to;">
-    <title>Movie Streamer</title>
-    <!-- Video.js CSS -->
-    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; }
-        h1, h2 { color: #ffffff; }
-        .controls { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .controls button { 
-            background-color: #e50914; 
-            color: white; 
-            border: none; 
-            padding: 10px 20px; 
-            cursor: pointer; 
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .controls button:hover { background-color: #f40612; }
-        .controls select {
-            padding: 10px;
-            background-color: #2a2a2a;
-            color: white;
-            border: 1px solid #444;
-            border-radius: 4px;
-        }
-        .stats {
-            background-color: #1e1e1e;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-        }
-        .stat-label { font-size: 0.9em; color: #888; }
-        .stat-value { font-size: 1.5em; font-weight: bold; color: #e50914; }
-        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .movie-card { 
-            background-color: #1e1e1e; 
-            border-radius: 8px; 
-            overflow: hidden; 
-            cursor: pointer; 
-            transition: transform 0.2s;
-            position: relative;
-        }
-        .movie-card:hover { transform: scale(1.05); }
-        .movie-card img { width: 100%; height: 300px; object-fit: cover; }
-        .movie-card h3 { padding: 10px; font-size: 1rem; margin: 0; }
-        .movie-source {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(229, 9, 20, 0.9);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75em;
-            font-weight: bold;
-        }
-        .modal { 
-            display: none; 
-            position: fixed; 
-            z-index: 1000; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            height: 100%; 
-            overflow: auto; 
-            background-color: rgba(0,0,0,0.8); 
-        }
-        .modal-content { 
-            background-color: #1e1e1e; 
-            margin: 5% auto; 
-            padding: 20px; 
-            border: 1px solid #444; 
-            width: 90%; 
-            max-width: 900px;
-            border-radius: 8px;
-        }
-        .close { 
-            color: #aaa; 
-            float: right; 
-            font-size: 28px; 
-            font-weight: bold; 
-            cursor: pointer; 
-        }
-        .close:hover { color: white; }
-        .video-wrapper { margin-top: 20px; }
-        #status { 
-            margin-top: 10px; 
-            padding: 10px;
-            background-color: #2a2a2a;
-            border-radius: 4px;
-            color: #f0f0f0; 
-        }
-        .server-list {
-            list-style: none;
-            padding: 0;
-        }
-        .server-list li {
-            margin: 5px 0;
-        }
-        .server-list a {
-            color: #e50914;
-            text-decoration: none;
-            padding: 5px 10px;
-            background-color: #2a2a2a;
-            border-radius: 4px;
-            display: inline-block;
-        }
-        .server-list a:hover {
-            background-color: #3a3a3a;
-        }
-        .loading {
-            text-align: center;
-            padding: 40px;
-            font-size: 1.2em;
-        }
-        .filter-info {
-            color: #888;
-            font-size: 0.9em;
-            margin-top: 10px;
-        }
-    </style>
+    <title>Movie Streamer - Fixed</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-
 <div class="container">
     <h1>🎬 Movie Aggregator</h1>
     
-    <div class="stats" id="stats">
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+        <button onclick="showPage('movies')" id="movies-nav-btn" class="nav-btn active">🎬 Movies</button>
+        <button onclick="showPage('series')" id="series-nav-btn" class="nav-btn">📺 Series</button>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="controls-wrapper">
+        <div class="search-controls">
+            <input type="text" id="search-input" placeholder="Search movies or series..." onkeypress="handleSearchKeypress(event)">
+            <button onclick="performSearch()" class="btn-search">🔍</button>
+            <button onclick="clearSearch()" class="btn-clear">✖</button>
+        </div>
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label>Source:</label>
+                <select id="source-filter" onchange="filterBySource()">
+                    <option value="">All Sources</option>
+                    <option value="1flix.to">1Flix</option>
+                    <option value="goojara.to">Goojara</option>
+                    <option value="sflix.ps">Sflix</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Year:</label>
+                <select id="year-filter" onchange="filterByYear()">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
         <div class="stat-item">
             <span class="stat-label">Total Movies</span>
             <span class="stat-value" id="total-movies">0</span>
@@ -148,429 +53,122 @@
             <span class="stat-value" id="movies-with-links">0</span>
         </div>
         <div class="stat-item">
-            <span class="stat-label">Sources</span>
-            <span class="stat-value" id="total-sources">0</span>
+            <span class="stat-label">Status</span>
+            <span class="stat-value" id="status-indicator">Ready</span>
         </div>
     </div>
 
-    <div class="controls">
-        <button onclick="refreshAllMovies()">🔄 Refresh All Sites</button>
-        <select id="site-select" onchange="refreshSingleSite()">
-            <option value="">Refresh Single Site...</option>
-            <option value="movietreasures">Movie Treasures</option>
-            <option value="fmovies">FMovies</option>
-            <option value="makemovies">Mak Movies</option>
-            <option value="simple_movies">Simple Movies</option>
-        </select>
-        <select id="filter-select" onchange="filterMovies()">
-            <option value="">All Sources</option>
-            <option value="movietreasures.org">Movie Treasures</option>
-            <option value="fmovies-co.net">FMovies</option>
-            <option value="makmoviestreaming.com">Mak Movies</option>
-            <option value="archive.org">Archive.org</option>
-            <option value="goojara.to">Goojara</option>
-            <option value="123movies.com">123Movies</option>
-        </select>
-        <select id="year-filter" onchange="filterMovies()">
-            <option value="">All Years</option>
-        </select>
+    <!-- Action Buttons -->
+    <div class="action-controls">
+        <button onclick="refreshAllMovies()" class="btn-refresh">🔄 Refresh All Sites</button>
     </div>
     
-    <p id="status"></p>
-    <div class="filter-info" id="filter-info"></div>
-    <hr>
-    <div id="movie-list" class="movie-grid">
-        <div class="loading">Loading movies...</div>
+    <p id="status" class="status-message"></p>
+    
+    <!-- Movies Page -->
+    <div id="movies-page" class="content-page active">
+        <h2>🎬 Available Movies</h2>
+        <div id="movie-list" class="movie-grid">
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Loading movies...</p>
+            </div>
+        </div>
+        <div id="load-more-movies-container" class="load-more-container">
+            <button id="load-more-movies-btn" class="load-more-btn" onclick="loadMoreMovies()">
+                Load More Movies
+            </button>
+        </div>
+    </div>
+    
+    <!-- Series Page -->
+    <div id="series-page" class="content-page">
+        <h2>📺 Available Series</h2>
+        <div id="series-list" class="movie-grid">
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Loading series...</p>
+            </div>
+        </div>
+        <div id="load-more-series-container" class="load-more-container">
+            <button id="load-more-series-btn" class="load-more-btn" onclick="loadMoreSeries()">
+                Load More Series
+            </button>
+        </div>
     </div>
 </div>
 
-<!-- The Modal for watching a movie -->
+<!-- Movie Watch Modal -->
 <div id="watchModal" class="modal">
-  <div class="modal-content">
-    <span class="close">&times;</span>
-    <h2 id="modal-title"></h2>
-    <p id="modal-synopsis"></p>
-    <div class="video-wrapper">
-        <video id="my-player" class="video-js vjs-default-skin" controls preload="auto" width="100%" height="400" data-setup='{"fluid": true}' style="display:block;">
-            <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video.</p>
-        </video>
-        <iframe id="embed-player" style="display:none; width:100%; height:500px; border:none;" allowfullscreen></iframe>
-        <div id="external-link" style="display:none; text-align:center; padding:40px; background:#2a2a2a; border-radius:8px;">
-            <p style="margin-bottom:20px; font-size:1.1em;">This movie is hosted on M4uHD.to and requires viewing on their site.</p>
-            <button onclick="openExternalLink()" style="background:#e50914; color:white; border:none; padding:15px 30px; font-size:1.1em; border-radius:4px; cursor:pointer;">🎬 Watch on M4uHD.to</button>
+    <div class="modal-content">
+        <span class="close" onclick="closeWatchModal()">&times;</span>
+        <h2 id="modal-title"></h2>
+        <p id="modal-synopsis" class="synopsis"></p>
+        
+        <div class="player-container">
+            <div id="iframe-loading" class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <p>Loading player...</p>
+            </div>
+            <div id="player-error" class="error-message" style="display: none;">
+                ⚠️ Unable to load video. Try another server.
+            </div>
+            <iframe id="embed-player" 
+                    allowfullscreen 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+            ></iframe>
+        </div>
+        
+        <div class="server-section">
+            <h3>Available Servers:</h3>
+            <ul id="server-list" class="server-list"></ul>
         </div>
     </div>
-    <h3>Available Servers:</h3>
-    <ul id="server-list" class="server-list"></ul>
-  </div>
 </div>
 
-<!-- Video.js JavaScript -->
-<script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
-
-<script>
-    const API_BASE = '/api';
-    const movieList = document.getElementById('movie-list');
-    const modal = document.getElementById('watchModal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalSynopsis = document.getElementById('modal-synopsis');
-    const serverList = document.getElementById('server-list');
-    const statusEl = document.getElementById('status');
-    const filterInfo = document.getElementById('filter-info');
-    const player = videojs('my-player');
-    
-    let allMovies = [];
-
-    // Get CSRF token from cookie
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // Modal controls
-    const span = document.getElementsByClassName("close")[0];
-    span.onclick = () => { modal.style.display = "none"; player.pause(); }
-    window.onclick = (event) => { if (event.target == modal) { modal.style.display = "none"; player.pause(); } }
-
-    async function fetchStats() {
-        try {
-            const response = await fetch(`${API_BASE}/movies/stats/`);
-            const stats = await response.json();
-            
-            document.getElementById('total-movies').textContent = stats.total_movies || 0;
-            document.getElementById('movies-with-links').textContent = stats.movies_with_links || 0;
-            document.getElementById('total-sources').textContent = Object.keys(stats.movies_by_site || {}).length;
-        } catch (error) {
-            console.error('Error fetching stats:', error);
-        }
-    }
-
-    let currentPage = 1;
-    let nextPageUrl = null;
-    let previousPageUrl = null;
-
-    async function fetchMovies(pageUrl = null) {
-        try {
-            statusEl.textContent = 'Fetching movies...';
-            const url = pageUrl || `${API_BASE}/movies/`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            allMovies = data.results || [];
-            nextPageUrl = data.next;
-            previousPageUrl = data.previous;
-            currentPage = pageUrl ? getPageFromUrl(pageUrl) : 1;
-            
-            statusEl.textContent = `Found ${data.count || allMovies.length} movies (page ${currentPage}).`;
-            populateYearFilter();
-            displayMovies(allMovies);
-            updatePaginationControls(data);
-            fetchStats();
-        } catch (error) {
-            statusEl.textContent = 'Error fetching movies.';
-            console.error('Error:', error);
-            movieList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #e50914;">Error loading movies. Please try again.</p>';
-        }
-    }
-
-    function getPageFromUrl(url) {
-        try {
-            const urlObj = new URL(url);
-            return parseInt(urlObj.searchParams.get('page')) || 1;
-        } catch {
-            return 1;
-        }
-    }
-
-    function updatePaginationControls(data) {
-        const controls = document.querySelector('.controls');
-        let paginationDiv = document.getElementById('pagination-controls');
+<!-- Series Modal -->
+<div id="seriesModal" class="modal">
+    <div class="modal-content">
+        <span class="close-series" onclick="closeSeriesModal()">&times;</span>
+        <h2 id="series-modal-title"></h2>
         
-        if (!paginationDiv) {
-            paginationDiv = document.createElement('div');
-            paginationDiv.id = 'pagination-controls';
-            paginationDiv.style.display = 'flex';
-            paginationDiv.style.gap = '10px';
-            paginationDiv.style.alignItems = 'center';
-            controls.appendChild(paginationDiv);
-        }
+        <div class="episode-selector">
+            <div class="select-group">
+                <label>Season:</label>
+                <select id="season-select"></select>
+            </div>
+            <div class="select-group">
+                <label>Episode:</label>
+                <select id="episode-select"></select>
+            </div>
+            <button onclick="playSelectedEpisode()" class="btn-play-episode">
+                ▶️ Play Episode
+            </button>
+        </div>
         
-        paginationDiv.innerHTML = '';
+        <div class="player-container">
+            <div id="series-iframe-loading" class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <p>Loading player...</p>
+            </div>
+            <div id="series-player-error" class="error-message" style="display: none;">
+                ⚠️ Unable to load video. Try another server.
+            </div>
+            <iframe id="series-embed-player" 
+                    allowfullscreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+            ></iframe>
+        </div>
         
-        if (data.previous) {
-            const prevBtn = document.createElement('button');
-            prevBtn.textContent = '⬅️ Previous';
-            prevBtn.onclick = () => fetchMovies(data.previous);
-            paginationDiv.appendChild(prevBtn);
-        }
-        
-        if (data.next) {
-            const nextBtn = document.createElement('button');
-            nextBtn.textContent = 'Next ➡️';
-            nextBtn.onclick = () => fetchMovies(data.next);
-            paginationDiv.appendChild(nextBtn);
-        }
-        
-        if (data.count) {
-            const pageInfo = document.createElement('span');
-            pageInfo.textContent = `Page ${currentPage} of ${Math.ceil(data.count / 10)} (${data.count} total movies)`;
-            pageInfo.style.color = '#888';
-            pageInfo.style.fontSize = '0.9em';
-            paginationDiv.appendChild(pageInfo);
-        }
-    }
+        <div class="server-section">
+            <h3>Available Servers:</h3>
+            <ul id="series-server-list" class="server-list"></ul>
+        </div>
+    </div>
+</div>
 
-    function populateYearFilter() {
-        const yearFilter = document.getElementById('year-filter');
-        
-        yearFilter.innerHTML = '<option value="">All Years</option>';
-        
-        // Add years from 2021 to 2025
-        for (let year = 2025; year >= 1990; year--) {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            yearFilter.appendChild(option);
-        }
-    }
-
-    function displayMovies(movies) {
-        movieList.innerHTML = '';
-        if (movies.length === 0) {
-            movieList.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No movies found. Click "Refresh All Sites" to start scraping.</p>';
-            return;
-        }
-        movies.forEach(movie => {
-            if (!movie.poster_url) return;
-            const card = document.createElement('div');
-            card.className = 'movie-card';
-            
-            const sourceName = getSourceName(movie.source_site);
-            
-            card.innerHTML = `
-                <img src="${movie.poster_url}" alt="${movie.title}">
-                <div class="movie-source">${sourceName}</div>
-                <h3>${movie.title} ${movie.year ? `(${movie.year})` : ''}</h3>
-            `;
-            card.onclick = () => openWatchModal(movie);
-            movieList.appendChild(card);
-        });
-    }
-
-    function getSourceName(site) {
-        const names = {
-            'movietreasures.org': 'MT',
-            'fmovies-co.net': 'FM',
-            'makmoviestreaming.com': 'MM',
-            'archive.org': 'AR',
-            'fawesome.tv': 'FA',
-            'goojara.to': 'GJ',
-            '123movies.com': '123'
-        };
-        return names[site] || site;
-    }
-
-    function filterMovies() {
-        const sourceFilter = document.getElementById('filter-select').value;
-        const yearFilter = document.getElementById('year-filter').value;
-        
-        // For now, just show a message that filtering requires reloading all movies
-        // In a full implementation, you'd want to either:
-        // 1. Filter on the backend with query parameters
-        // 2. Load all movies and filter client-side
-        
-        if (sourceFilter || yearFilter) {
-            statusEl.textContent = 'Filtering is not available with pagination. Please clear filters and use search.';
-            document.getElementById('filter-select').value = '';
-            document.getElementById('year-filter').value = '';
-            return;
-        }
-        
-        displayMovies(allMovies);
-        filterInfo.textContent = '';
-    }
-
-    async function openWatchModal(movie) {
-        modalTitle.textContent = `${movie.title} ${movie.year ? `(${movie.year})` : ''}`;
-        modalSynopsis.textContent = movie.synopsis || 'No synopsis available.';
-        serverList.innerHTML = '';
-
-        try {
-            const response = await fetch(`${API_BASE}/watch/${movie.imdb_id}/`);
-            const movieData = await response.json();
-            const links = movieData.links.filter(link => link.is_active);
-
-            if (links.length > 0) {
-                const firstLink = links[0];
-                setupPlayer(firstLink.stream_url);
-                
-                links.forEach((link, index) => {
-                    const li = document.createElement('li');
-                    const serverName = link.server_name || 'Server ' + (index + 1);
-                    li.innerHTML = `<a href="#" onclick="setupPlayer('${link.stream_url}'); return false;">${serverName} - ${link.quality} (${link.language})</a>`;
-                    serverList.appendChild(li);
-                });
-            } else {
-                const videoPlayer = document.getElementById('my-player');
-                videoPlayer.style.display = 'none';
-                document.getElementById('embed-player').style.display = 'none';
-                document.getElementById('external-link').style.display = 'none';
-                player.pause();
-                serverList.innerHTML = '<li style="color: #888;">No active streaming links found. Try refreshing.</li>';
-            }
-        } catch (error) {
-            console.error('Error fetching movie details:', error);
-            serverList.innerHTML = '<li style="color: #e50914;">Could not load streaming links.</li>';
-        }
-        modal.style.display = "block";
-    }
-
-    let currentExternalUrl = '';
-    
-    function openExternalLink() {
-        if (currentExternalUrl) {
-            window.open(currentExternalUrl, '_blank');
-        }
-    }
-    
-    function setupPlayer(streamUrl) {
-        const videoPlayer = document.getElementById('my-player');
-        const embedPlayer = document.getElementById('embed-player');
-        const externalLink = document.getElementById('external-link');
-        
-        // M4uHD blocks iframe embedding, so open in new tab
-        const m4uhdDomains = ['ppzj-youtube.cfd'];
-        const isM4uhd = m4uhdDomains.some(domain => streamUrl.includes(domain));
-        
-        if (isM4uhd) {
-            // Show "Open in New Tab" button for M4uHD
-            videoPlayer.style.display = 'none';
-            embedPlayer.style.display = 'none';
-            externalLink.style.display = 'block';
-            currentExternalUrl = streamUrl;
-            player.pause();
-            return;
-        }
-        
-        // Check if URL is an embed page (myvidplay, wootly, goojara, luluvdo, vidsrc, dood, etc.)
-        const embedDomains = ['myvidplay.com', 'wootly.ch', 'vidsrc', 'dood', 'luluvdo.com', 'goojara.to'];
-        const isEmbed = embedDomains.some(domain => streamUrl.includes(domain));
-        
-        if (isEmbed) {
-            // Use iframe for other embed URLs
-            videoPlayer.style.display = 'none';
-            embedPlayer.style.display = 'block';
-            externalLink.style.display = 'none';
-            embedPlayer.src = streamUrl;
-            player.pause();
-        } else {
-            // Use video player for direct video URLs
-            videoPlayer.style.display = 'block';
-            embedPlayer.style.display = 'none';
-            externalLink.style.display = 'none';
-            embedPlayer.src = '';
-            
-            let type = 'video/mp4';
-            if (streamUrl.includes('.m3u8')) {
-                type = 'application/x-mpegURL';
-            }
-
-            player.src({
-                src: streamUrl,
-                type: type
-            });
-            player.ready(() => {
-                player.play().catch(e => console.log('Autoplay prevented:', e));
-            });
-        }
-    }
-
-    async function refreshAllMovies() {
-        statusEl.textContent = 'Triggering a full refresh... This may take several minutes.';
-        statusEl.style.backgroundColor = '#2a5c2a';
-        
-        try {
-            const csrftoken = getCookie('csrftoken');
-            const response = await fetch(`${API_BASE}/movies/refresh/`, { 
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrftoken,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                statusEl.textContent = `${data.status} ${data.message}`;
-                setTimeout(() => {
-                    fetchMovies();
-                    statusEl.style.backgroundColor = '#2a2a2a';
-                }, 120000);
-            } else {
-                const error = await response.json();
-                statusEl.textContent = `Error: ${error.detail || 'Failed to start refresh'}`;
-                statusEl.style.backgroundColor = '#5c2a2a';
-            }
-        } catch (error) {
-            statusEl.textContent = 'Error triggering refresh.';
-            statusEl.style.backgroundColor = '#5c2a2a';
-            console.error('Error:', error);
-        }
-    }
-
-    async function refreshSingleSite() {
-        const select = document.getElementById('site-select');
-        const site = select.value;
-        
-        if (!site) return;
-        
-        statusEl.textContent = `Triggering refresh for ${site}... This may take a few minutes.`;
-        statusEl.style.backgroundColor = '#2a5c2a';
-        
-        try {
-            const csrftoken = getCookie('csrftoken');
-            const response = await fetch(`${API_BASE}/movies/refresh-site/`, { 
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrftoken,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ site: site })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                statusEl.textContent = `${data.status} ${data.message}`;
-                setTimeout(() => {
-                    fetchMovies();
-                    statusEl.style.backgroundColor = '#2a2a2a';
-                }, 60000);
-            } else {
-                const error = await response.json();
-                statusEl.textContent = `Error: ${error.error || 'Failed to start refresh'}`;
-                statusEl.style.backgroundColor = '#5c2a2a';
-            }
-        } catch (error) {
-            statusEl.textContent = 'Error triggering refresh.';
-            statusEl.style.backgroundColor = '#5c2a2a';
-            console.error('Error:', error);
-        }
-        
-        select.value = '';
-    }
-
-    // Initial load
-    fetchMovies();
-</script>
+<script src="/static/js/app.js"></script>
 </body>
 </html>

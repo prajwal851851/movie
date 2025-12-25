@@ -58,3 +58,25 @@ LOG_LEVEL = 'INFO'
 # Retry settings
 RETRY_TIMES = 3
 RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
+
+
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',  # or your database path
+        'OPTIONS': {
+            'timeout': 20,  # Increase timeout to 20 seconds
+            'check_same_thread': False,  # Allow multi-threaded access
+        },
+        'ATOMIC_REQUESTS': True,  # Wrap each request in a transaction
+    }
+}
+
+# Additionally, add these settings to help with concurrency:
+
+# Reduce the number of database connections
+CONN_MAX_AGE = 0  # Close database connections after each request
+
+# Add connection poo

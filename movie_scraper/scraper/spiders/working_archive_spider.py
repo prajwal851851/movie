@@ -6,6 +6,15 @@ import scrapy
 from scraper.items import MovieItem
 import re
 import json
+import os
+import django
+from django.conf import settings
+
+# Setup Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'movie_scrape.settings')
+django.setup()
+
+from streaming.models import Movie
 
 class WorkingArchiveSpider(scrapy.Spider):
     name = 'working_archive'
@@ -13,18 +22,19 @@ class WorkingArchiveSpider(scrapy.Spider):
     
     # Use Archive.org's search API
     def start_requests(self):
-        # Search for HD quality movies, prioritizing recently added content
+        # Search for HD quality sci-fi movies, prioritizing recently added content
         # Note: Archive.org's year field is often the upload date, not movie release year
-        collections = ['feature_films', 'moviesandfilms']
-        
+        collections = ['opensource_movies', 'feature_films', 'moviesandfilms']
+
         for collection in collections:
-            # Search for HD format movies, sorted by recently added (more likely to be modern)
+            # Search for HD format sci-fi movies, sorted by recently added
+            # Note: Archive.org's year field is upload date, not movie release year
             url = (
                 f'https://archive.org/advancedsearch.php?'
                 f'q=collection:{collection}+AND+mediatype:movies'
                 f'+AND+(format:h.264+OR+format:"MPEG4"+OR+format:"h.264+HD")'
-                f'&fl[]=identifier&fl[]=title&fl[]=year&fl[]=description&fl[]=date'
-                f'&sort[]=addeddate+desc&rows=100&page=1&output=json'
+                f'&fl[]=identifier&fl[]=title&fl[]=year&fl[]=description&fl[]=date&fl[]=subject'
+                f'&sort[]=addeddate+desc&rows=200&page=1&output=json'
             )
             yield scrapy.Request(url, callback=self.parse_api_response, meta={'collection': collection})
     
@@ -39,6 +49,7 @@ class WorkingArchiveSpider(scrapy.Spider):
         super().__init__(*args, **kwargs)
         self.limit = int(limit)
         self.count = 0
+        self.year_counts = {}
 
     def parse_api_response(self, response):
         """Parse JSON API response"""
@@ -83,16 +94,30 @@ class WorkingArchiveSpider(scrapy.Spider):
         url_parts = response.url.split('/')
         url_id = url_parts[-1] if url_parts else None
         item['imdb_id'] = f'archive_{url_id}'
-        
+
+        # Check if movie already exists in database
+        try:
+            existing_movie = Movie.objects.filter(imdb_id=item['imdb_id']).first()
+            if existing_movie:
+                self.logger.info(f'⊘ Skipping already scraped movie: {existing_movie.title} (ID: {item["imdb_id"]})')
+                return
+        except Exception as e:
+            self.logger.warning(f'Could not check database for duplicates: {e}')
+
         # Get title from API data or page
         title = api_data.get('title')
         if not title:
             title = response.css('h1[itemprop="name"]::text').get()
         if not title:
             title = response.xpath('//meta[@property="og:title"]/@content').get()
-        
+
         item['title'] = title.strip() if title else 'Unknown'
-        
+
+        # Skip trailers
+        if 'trailer' in title.lower():
+            self.logger.info(f'⊘ Skipping trailer: {title}')
+            return
+
         # Extract actual movie release year from title (not upload year)
         year = None
         
@@ -106,10 +131,16 @@ class WorkingArchiveSpider(scrapy.Spider):
             if year_match:
                 year = int(year_match.group(0))
         
-        # Filter: Only accept movies from 2010-2025
-        if not year or year < 2010 or year > 2025:
-            self.logger.info(f'⊘ Skipping {title} - Year {year} outside 2010-2025 range')
+        # Filter for latest available movies (2010-2024)
+        if not year or not (2010 <= year <= 2025):
+            self.logger.info(f'⊘ Skipping {title} - Year {year} not in 2010-2024 range')
             return
+
+        # Collect year statistics
+        if year:
+            if year not in self.year_counts:
+                self.year_counts[year] = 0
+            self.year_counts[year] += 1
         
         item['year'] = year
         
@@ -231,3 +262,14 @@ class WorkingArchiveSpider(scrapy.Spider):
             self.logger.error(f'Failed to parse metadata JSON: {e}')
         except Exception as e:
             self.logger.error(f'Error processing metadata for {item["title"]}: {e}')
+
+    def closed(self, reason):
+        """Print year statistics when spider closes"""
+        self.logger.info("=== MOVIE YEAR STATISTICS ===")
+        if self.year_counts:
+            sorted_years = sorted(self.year_counts.items(), key=lambda x: x[0])
+            for year, count in sorted_years:
+                self.logger.info(f"Year {year}: {count} movies")
+        else:
+            self.logger.info("No year data collected")
+        self.logger.info("=== END STATISTICS ===")
