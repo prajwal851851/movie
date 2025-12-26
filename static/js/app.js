@@ -1,7 +1,7 @@
 // Configuration
 const API_BASE = '/api';
 const ITEMS_PER_PAGE = 12;
-const PLAYER_TIMEOUT = 10000; // 10 seconds
+const PLAYER_TIMEOUT = 10000;
 
 // State Management
 const state = {
@@ -21,12 +21,10 @@ const state = {
     currentPlayerTimeout: null
 };
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
 });
 
-// Initialize Application
 async function initializeApp() {
     console.log('Initializing Movie Streamer...');
     await loadInitialMovies();
@@ -34,7 +32,6 @@ async function initializeApp() {
     await fetchStats();
 }
 
-// Search Functions
 function handleSearchKeypress(event) {
     if (event.key === 'Enter') {
         performSearch();
@@ -65,22 +62,18 @@ function filterBySource() {
     resetAndReload();
 }
 
-// Page Navigation
 function showPage(page) {
     state.currentContentType = page === 'movies' ? 'movie' : 'series';
     
-    // Toggle page visibility
     document.getElementById('movies-page').classList.toggle('active', page === 'movies');
     document.getElementById('series-page').classList.toggle('active', page === 'series');
     
-    // Toggle button styles
     document.getElementById('movies-nav-btn').classList.toggle('active', page === 'movies');
     document.getElementById('series-nav-btn').classList.toggle('active', page === 'series');
     
     resetAndReload();
 }
 
-// Reset and Reload
 function resetAndReload() {
     state.currentMovieOffset = 0;
     state.currentSeriesOffset = 0;
@@ -95,7 +88,6 @@ function resetAndReload() {
     loadInitialMovies();
 }
 
-// Build API URL
 function buildApiUrl(base, offset) {
     let url = `${base}?limit=${ITEMS_PER_PAGE}&offset=${offset}&content_type=${state.currentContentType}`;
     if (state.currentSearch) url += `&search=${encodeURIComponent(state.currentSearch)}`;
@@ -104,7 +96,6 @@ function buildApiUrl(base, offset) {
     return url;
 }
 
-// Fetch Stats
 async function fetchStats() {
     try {
         const response = await fetch(`${API_BASE}/movies/stats/`);
@@ -118,7 +109,6 @@ async function fetchStats() {
     }
 }
 
-// Populate Year Filter
 async function populateYearFilter() {
     try {
         const response = await fetch(`${API_BASE}/movies/years/`);
@@ -136,14 +126,12 @@ async function populateYearFilter() {
     }
 }
 
-// Load Initial Movies
 async function loadInitialMovies() {
     updateStatus('Loading content...', 'loading');
     
     try {
         const moviesUrl = buildApiUrl(`${API_BASE}/movies/`, 0);
         
-        // Temporarily switch to series for series request
         const originalType = state.currentContentType;
         state.currentContentType = 'series';
         const seriesUrl = buildApiUrl(`${API_BASE}/movies/`, 0);
@@ -154,21 +142,17 @@ async function loadInitialMovies() {
             fetch(seriesUrl).then(r => r.json())
         ]);
 
-        // Update movies
         state.allMovies = moviesData.results || [];
         state.currentMovieOffset = state.allMovies.length;
         state.hasMoreMovies = moviesData.next !== null;
 
-        // Update series
         state.allSeries = seriesData.results || [];
         state.currentSeriesOffset = state.allSeries.length;
         state.hasMoreSeries = seriesData.next !== null;
 
-        // Display content
         displayMovies(state.allMovies, false);
         displaySeries(state.allSeries, false);
 
-        // Show load more buttons if needed
         if (state.allMovies.length > 0 && state.hasMoreMovies) {
             document.getElementById('load-more-movies-container').style.display = 'block';
         }
@@ -185,7 +169,6 @@ async function loadInitialMovies() {
     }
 }
 
-// Load More Movies
 async function loadMoreMovies() {
     if (!state.hasMoreMovies || state.isLoading) return;
     
@@ -227,7 +210,6 @@ async function loadMoreMovies() {
     }
 }
 
-// Load More Series
 async function loadMoreSeries() {
     if (!state.hasMoreSeries || state.isLoading) return;
     
@@ -273,7 +255,6 @@ async function loadMoreSeries() {
     }
 }
 
-// Display Movies
 function displayMovies(movies, append = false) {
     const list = document.getElementById('movie-list');
     
@@ -305,7 +286,6 @@ function displayMovies(movies, append = false) {
     });
 }
 
-// Display Series
 function displaySeries(seriesArray, append = false) {
     const list = document.getElementById('series-list');
     
@@ -319,7 +299,6 @@ function displaySeries(seriesArray, append = false) {
         return;
     }
 
-    // Group by series name
     const byName = {};
     seriesArray.forEach(series => {
         const name = series.title.replace(/\s*S\d+,?\s*E\d+.*/, '').trim();
@@ -349,7 +328,6 @@ function displaySeries(seriesArray, append = false) {
     });
 }
 
-// Get Source Name
 function getSourceName(site) {
     const names = {
         '1flix.to': '1F',
@@ -359,7 +337,7 @@ function getSourceName(site) {
     return names[site] || site;
 }
 
-// Open Watch Modal
+// UPDATED: Enhanced openWatchModal with proxy support
 async function openWatchModal(movie) {
     document.getElementById('modal-title').textContent = `${movie.title} ${movie.year ? `(${movie.year})` : ''}`;
     document.getElementById('modal-synopsis').textContent = movie.synopsis || 'No synopsis available.';
@@ -371,11 +349,32 @@ async function openWatchModal(movie) {
         const response = await fetch(`${API_BASE}/watch/${movie.imdb_id}/`);
         const data = await response.json();
         
+        console.log('\n' + '='.repeat(60));
+        console.log('🔍 API Response for movie:', movie.title);
+        console.log('='.repeat(60));
+        
         const links = data.links.filter(link => link.is_active && link.stream_url);
+        
+        console.log(`Found ${links.length} active links:`);
+        links.forEach((link, i) => {
+            console.log(`\n${i+1}. ${link.server_name}:`);
+            console.log(`   URL: ${link.stream_url.substring(0, 60)}...`);
+            console.log(`   Needs Proxy: ${link.needs_proxy}`);
+            console.log(`   Link ID: ${link.link_id}`);
+        });
+        console.log('='.repeat(60) + '\n');
 
         if (links.length > 0) {
             // Load first server
-            setupPlayer(links[0].stream_url, links[0].server_name || 'Default', 'embed-player', 'iframe-loading');
+            setupPlayer(
+                links[0].stream_url, 
+                links[0].server_name || 'Default', 
+                'embed-player', 
+                'iframe-loading',
+                links[0].needs_proxy,
+                movie.imdb_id,
+                links[0].link_id
+            );
             
             // Create server list
             links.forEach((link, index) => {
@@ -384,9 +383,23 @@ async function openWatchModal(movie) {
                 a.href = '#';
                 a.id = `srv-${index}`;
                 a.innerHTML = `${link.server_name || 'Server'} <span class="server-badge">${link.quality}</span>`;
+                
+                // Add proxy indicator if needed
+                if (link.needs_proxy) {
+                    a.innerHTML += ' <span style="color:#4CAF50;font-size:0.8em;">🔒</span>';
+                }
+                
                 a.onclick = (e) => {
                     e.preventDefault();
-                    setupPlayer(link.stream_url, link.server_name || 'Server', 'embed-player', 'iframe-loading');
+                    setupPlayer(
+                        link.stream_url, 
+                        link.server_name || 'Server', 
+                        'embed-player', 
+                        'iframe-loading',
+                        link.needs_proxy,
+                        movie.imdb_id,
+                        link.link_id
+                    );
                     document.querySelectorAll('#server-list a').forEach(el => el.classList.remove('active'));
                     a.classList.add('active');
                 };
@@ -394,7 +407,6 @@ async function openWatchModal(movie) {
                 document.getElementById('server-list').appendChild(li);
             });
             
-            // Set first server as active
             setTimeout(() => {
                 const firstServer = document.getElementById('srv-0');
                 if (firstServer) firstServer.classList.add('active');
@@ -414,9 +426,15 @@ async function openWatchModal(movie) {
     document.getElementById('watchModal').style.display = "block";
 }
 
-// Setup Player
-function setupPlayer(url, serverName, playerId, loadingId) {
-    console.log(`Setting up player: ${serverName}`, url);
+// UPDATED: setupPlayer with proxy support
+function setupPlayer(url, serverName, playerId, loadingId, needsProxy = false, imdbId = null, linkId = null) {
+    console.log(`🎬 Setting up player:`, {
+        server: serverName,
+        url: url.substring(0, 60) + '...',
+        needsProxy: needsProxy,
+        imdbId: imdbId,
+        linkId: linkId
+    });
     
     const player = document.getElementById(playerId);
     const loading = document.getElementById(loadingId);
@@ -424,32 +442,33 @@ function setupPlayer(url, serverName, playerId, loadingId) {
         document.getElementById('player-error') : 
         document.getElementById('series-player-error');
     
-    // Clear existing timeout
     if (state.currentPlayerTimeout) {
         clearTimeout(state.currentPlayerTimeout);
     }
     
-    // Show loading
     loading.style.display = 'flex';
     errorDiv.style.display = 'none';
     player.style.opacity = '0.3';
     
-    // Clear current source
     player.src = 'about:blank';
     
-    // Set timeout for loading
     state.currentPlayerTimeout = setTimeout(() => {
         loading.style.display = 'none';
-        errorDiv.style.display = 'block';
         player.style.opacity = '1';
-        console.warn('Player loading timeout');
+        console.warn('Player loading timeout - but video may still work');
     }, PLAYER_TIMEOUT);
     
-    // Load new source after a brief delay
     setTimeout(() => {
         try {
-            player.src = url;
-            console.log('Player source set');
+            // Use proxy for problematic servers
+            if (needsProxy && imdbId && linkId) {
+                const proxyUrl = `/player/${imdbId}/${linkId}/`;
+                console.log('🔒 Using PROXY:', proxyUrl);
+                player.src = proxyUrl;
+            } else {
+                console.log('▶️ Direct embed:', url.substring(0, 60) + '...');
+                player.src = url;
+            }
         } catch (error) {
             console.error('Error setting player source:', error);
             clearTimeout(state.currentPlayerTimeout);
@@ -459,7 +478,6 @@ function setupPlayer(url, serverName, playerId, loadingId) {
         }
     }, 300);
     
-    // Handle load event
     player.onload = () => {
         console.log('Player loaded successfully');
         clearTimeout(state.currentPlayerTimeout);
@@ -469,7 +487,6 @@ function setupPlayer(url, serverName, playerId, loadingId) {
         }, 1000);
     };
     
-    // Handle error
     player.onerror = () => {
         console.error('Player error');
         clearTimeout(state.currentPlayerTimeout);
@@ -479,7 +496,6 @@ function setupPlayer(url, serverName, playerId, loadingId) {
     };
 }
 
-// Close Watch Modal
 function closeWatchModal() {
     document.getElementById('watchModal').style.display = "none";
     document.getElementById('embed-player').src = 'about:blank';
@@ -488,11 +504,10 @@ function closeWatchModal() {
     }
 }
 
-// Open Series Modal
+// UPDATED: Enhanced openSeriesModal with proxy support
 async function openSeriesModal(name, episodes) {
     document.getElementById('series-modal-title').textContent = name;
     
-    // Group by season
     const seasonMap = {};
     episodes.forEach(ep => {
         const match = ep.title.match(/S(\d+),?\s*E(\d+)/);
@@ -508,7 +523,6 @@ async function openSeriesModal(name, episodes) {
     
     const seasons = Object.keys(seasonMap).sort((a, b) => parseInt(a) - parseInt(b));
     
-    // Populate season select
     const seasonSelect = document.getElementById('season-select');
     seasonSelect.innerHTML = '';
     seasons.forEach(season => {
@@ -518,16 +532,12 @@ async function openSeriesModal(name, episodes) {
         seasonSelect.appendChild(option);
     });
     
-    // Store season map globally
     window.currentSeasonMap = seasonMap;
     
-    // Update episode select
     updateEpisodeSelect(seasonSelect.value);
     
-    // Add event listener
     seasonSelect.onchange = () => updateEpisodeSelect(seasonSelect.value);
     
-    // Reset player
     document.getElementById('series-server-list').innerHTML = '';
     document.getElementById('series-embed-player').style.display = 'none';
     document.getElementById('series-embed-player').src = '';
@@ -536,7 +546,6 @@ async function openSeriesModal(name, episodes) {
     document.getElementById('seriesModal').style.display = "block";
 }
 
-// Update Episode Select
 function updateEpisodeSelect(season) {
     const episodeSelect = document.getElementById('episode-select');
     episodeSelect.innerHTML = '';
@@ -554,7 +563,7 @@ function updateEpisodeSelect(season) {
     });
 }
 
-// Play Selected Episode
+// UPDATED: playSelectedEpisode with proxy support
 async function playSelectedEpisode() {
     const episodeSelect = document.getElementById('episode-select');
     const selectedOption = episodeSelect.selectedOptions[0];
@@ -573,22 +582,40 @@ async function playSelectedEpisode() {
         serverList.innerHTML = '';
         
         if (links.length > 0) {
-            // Show player
             document.getElementById('series-embed-player').style.display = 'block';
             
-            // Setup first server
-            setupPlayer(links[0].stream_url, links[0].server_name || 'Default', 'series-embed-player', 'series-iframe-loading');
+            setupPlayer(
+                links[0].stream_url, 
+                links[0].server_name || 'Default', 
+                'series-embed-player', 
+                'series-iframe-loading',
+                links[0].needs_proxy,
+                episode.imdb_id,
+                links[0].link_id
+            );
             
-            // Create server list
             links.forEach((link, index) => {
                 const li = document.createElement('li');
                 const a = document.createElement('a');
                 a.href = '#';
                 a.id = `ssrv-${index}`;
                 a.innerHTML = `${link.server_name || 'Server'} <span class="server-badge">${link.quality}</span>`;
+                
+                if (link.needs_proxy) {
+                    a.innerHTML += ' <span style="color:#4CAF50;font-size:0.8em;">🔒</span>';
+                }
+                
                 a.onclick = (e) => {
                     e.preventDefault();
-                    setupPlayer(link.stream_url, link.server_name || 'Server', 'series-embed-player', 'series-iframe-loading');
+                    setupPlayer(
+                        link.stream_url, 
+                        link.server_name || 'Server', 
+                        'series-embed-player', 
+                        'series-iframe-loading',
+                        link.needs_proxy,
+                        episode.imdb_id,
+                        link.link_id
+                    );
                     document.querySelectorAll('#series-server-list a').forEach(el => el.classList.remove('active'));
                     a.classList.add('active');
                 };
@@ -596,7 +623,6 @@ async function playSelectedEpisode() {
                 serverList.appendChild(li);
             });
             
-            // Set first server as active
             setTimeout(() => {
                 const firstServer = document.getElementById('ssrv-0');
                 if (firstServer) firstServer.classList.add('active');
@@ -614,7 +640,6 @@ async function playSelectedEpisode() {
     }
 }
 
-// Close Series Modal
 function closeSeriesModal() {
     document.getElementById('seriesModal').style.display = "none";
     document.getElementById('series-embed-player').src = 'about:blank';
@@ -623,7 +648,6 @@ function closeSeriesModal() {
     }
 }
 
-// Refresh All Movies
 async function refreshAllMovies() {
     updateStatus('Starting refresh for all sites...', 'loading');
     
@@ -641,7 +665,6 @@ async function refreshAllMovies() {
             const data = await response.json();
             updateStatus(data.message, 'success');
             
-            // Reload after 60 seconds
             setTimeout(() => {
                 updateStatus('Reloading content...', 'loading');
                 loadInitialMovies();
@@ -655,7 +678,6 @@ async function refreshAllMovies() {
     }
 }
 
-// Update Status
 function updateStatus(message, type = 'info') {
     const statusElement = document.getElementById('status');
     const indicatorElement = document.getElementById('status-indicator');
@@ -673,7 +695,6 @@ function updateStatus(message, type = 'info') {
     console.log(`[${type.toUpperCase()}] ${message}`);
 }
 
-// Get Cookie (for CSRF)
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -689,7 +710,6 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Modal close on outside click
 window.onclick = (event) => {
     if (event.target == document.getElementById('watchModal')) {
         closeWatchModal();
