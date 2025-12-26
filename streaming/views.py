@@ -175,8 +175,8 @@ class MovieWatchView(APIView):
 
 def player_proxy(request, imdb_id, link_id):
     """
-    Enhanced proxy that fetches embed page content and extracts video player
-    This bypasses X-Frame-Options by not using iframes at all
+    Enhanced proxy that fetches embed page content and bypasses sandbox/CORS restrictions
+    Removes sandbox detection scripts and adds anti-detection measures
     """
     try:
         movie = Movie.objects.get(imdb_id=imdb_id)
@@ -202,7 +202,24 @@ def player_proxy(request, imdb_id, link_id):
             parsed_url = urlparse(link.stream_url)
             base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
             
-            # Inject our custom HTML wrapper that fixes relative URLs
+            # Clean HTML: Remove sandbox detection scripts
+            # Remove scripts that check for sandbox, adblock, or iframe restrictions
+            import re
+            
+            # Remove specific anti-bot/sandbox detection scripts
+            patterns_to_remove = [
+                r'<script[^>]*>.*?sandbox.*?</script>',
+                r'<script[^>]*>.*?adblock.*?</script>',
+                r'<script[^>]*>.*?AdBlock.*?</script>',
+                r'<script[^>]*src=["\'][^"\']*new100\.js["\'][^>]*>.*?</script>',
+                r'<script[^>]*src=["\'][^"\']*chext_loader\.js["\'][^>]*>.*?</script>',
+            ]
+            
+            cleaned_html = embed_html
+            for pattern in patterns_to_remove:
+                cleaned_html = re.sub(pattern, '', cleaned_html, flags=re.IGNORECASE | re.DOTALL)
+            
+            # Inject our custom HTML wrapper with anti-detection code
             html = f"""
 <!DOCTYPE html>
 <html>
@@ -241,6 +258,44 @@ def player_proxy(request, imdb_id, link_id):
             display: none !important;
         }}
     </style>
+    
+    <script>
+        // ANTI-DETECTION: Override sandbox detection BEFORE any other scripts load
+        (function() {{
+            // Override document.domain to prevent sandbox detection
+            try {{
+                Object.defineProperty(document, 'domain', {{
+                    get: function() {{ return '{parsed_url.netloc}'; }},
+                    set: function() {{ return true; }}
+                }});
+            }} catch(e) {{}}
+            
+            // Disable iframe detection
+            window.self = window.top;
+            window.parent = window.top;
+            
+            // Mock eval to always return true (some scripts check if eval is allowed)
+            const originalEval = window.eval;
+            window.eval = function() {{
+                try {{
+                    return originalEval.apply(this, arguments);
+                }} catch(e) {{
+                    return true;
+                }}
+            }};
+            
+            // Block popup attempts
+            window.open = function() {{ return null; }};
+            
+            // Disable adblock detection
+            Object.defineProperty(window, 'adblock', {{
+                get: function() {{ return false; }},
+                set: function() {{ return false; }}
+            }});
+            
+            console.log('Anti-detection measures activated');
+        }})();
+    </script>
 </head>
 <body>
     <div class="server-info">
@@ -249,28 +304,39 @@ def player_proxy(request, imdb_id, link_id):
     
     <!-- Injected embed content -->
     <div id="embed-container">
-        {embed_html}
+        {cleaned_html}
     </div>
     
     <script>
-        // Block popup attempts
-        window.open = function() {{ return null; }};
-        
-        // Remove any ad elements that load dynamically
-        setInterval(function() {{
-            const ads = document.querySelectorAll('.ad, .ads, [class*="ad-"], [id*="ad-"], [class*="popup"], [id*="popup"]');
-            ads.forEach(ad => ad.remove());
-        }}, 1000);
-        
-        console.log('Proxy player loaded successfully');
+        // Additional runtime protections
+        (function() {{
+            // Remove any ad elements that load dynamically
+            setInterval(function() {{
+                const ads = document.querySelectorAll('.ad, .ads, [class*="ad-"], [id*="ad-"], [class*="popup"], [id*="popup"]');
+                ads.forEach(ad => ad.remove());
+            }}, 1000);
+            
+            // Override any late-loading sandbox detection
+            setTimeout(function() {{
+                window.self = window.top;
+                window.parent = window.top;
+            }}, 100);
+            
+            console.log('Proxy player loaded successfully');
+        }})();
     </script>
 </body>
 </html>
             """
             
+            # Create response with CORS bypass headers
             django_response = HttpResponse(html)
             django_response['X-Frame-Options'] = 'SAMEORIGIN'
             django_response['Content-Security-Policy'] = "frame-ancestors 'self'"
+            django_response['Access-Control-Allow-Origin'] = '*'
+            django_response['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            django_response['Access-Control-Allow-Headers'] = '*'
+            
             return django_response
             
         except requests.RequestException as e:
