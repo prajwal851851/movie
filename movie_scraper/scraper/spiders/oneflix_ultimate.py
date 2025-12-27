@@ -139,10 +139,18 @@ class OneFlixUltimateSpider(scrapy.Spider):
         if any(pattern in url.lower() for pattern in invalid_patterns):
             return False, "Invalid pattern in URL"
         
-        # VideoStr.net specific checks
+        # VideoStr.net specific checks (strict)
         if 'videostr.net' in url:
             if not re.search(r'/e-1/[A-Za-z0-9_-]+\?z=', url):
                 return False, "Invalid VideoStr format"
+            # Check if z= parameter has a value (not empty)
+            if '?z=' in url:
+                z_param = url.split('?z=')[1].split('&')[0]
+                if len(z_param) < 10:
+                    return False, "Incomplete URL parameters (z= is empty or too short)"
+        
+        # For other servers (MegaCloud, VidCloud, etc.), just check basic structure
+        # They might have different URL patterns
         
         return True, "Passed quick validation"
 
@@ -327,9 +335,16 @@ class OneFlixUltimateSpider(scrapy.Spider):
             servers_info.sort(key=lambda x: x[0])
             
             # Try each server until we find a working link
-            for priority, srv_name, srv_id, button_elem in servers_info[:3]:  # Try top 3
+            for priority, srv_name, srv_id, _ in servers_info[:3]:  # Try top 3
                 try:
                     self.logger.info(f'   🔍 Testing {srv_name}...')
+                    
+                    # Re-find the button to avoid stale element reference
+                    try:
+                        button_elem = self.driver.find_element(By.CSS_SELECTOR, f"a[data-id='{srv_id}'].link-item")
+                    except:
+                        self.logger.warning(f'      ⚠️  Could not find button for {srv_name}')
+                        continue
                     
                     # Click server button
                     self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button_elem)
@@ -337,11 +352,11 @@ class OneFlixUltimateSpider(scrapy.Spider):
                     self.driver.execute_script("arguments[0].click();", button_elem)
                     time.sleep(5)
                     
-                    # Find iframe
+                    # Find iframe and wait for it to fully load
                     iframe = None
                     for selector in ["iframe#iframe-embed", "iframe[src*='embed']", "iframe[src]"]:
                         try:
-                            iframe = WebDriverWait(self.driver, 5).until(
+                            iframe = WebDriverWait(self.driver, 8).until(
                                 EC.presence_of_element_located((By.CSS_SELECTOR, selector))
                             )
                             if iframe:
@@ -353,11 +368,27 @@ class OneFlixUltimateSpider(scrapy.Spider):
                         self.logger.warning(f'      ⚠️  No iframe found')
                         continue
                     
-                    iframe_src = iframe.get_attribute('src')
+                    # Wait additional time for JavaScript to populate the iframe src fully
+                    time.sleep(3)
+                    
+                    # Get iframe src - try multiple times as it may be dynamically loaded
+                    iframe_src = None
+                    for attempt in range(3):
+                        iframe_src = iframe.get_attribute('src')
+                        # For videostr, check if z= has a value
+                        if iframe_src and 'videostr.net' in iframe_src:
+                            if '?z=' in iframe_src and len(iframe_src.split('?z=')[1]) > 5:
+                                break
+                        # For other servers, just check if URL looks reasonable
+                        elif iframe_src and len(iframe_src) > 30:
+                            break
+                        time.sleep(2)
                     
                     if not iframe_src or len(iframe_src) < 20:
                         self.logger.warning(f'      ⚠️  Invalid iframe src')
                         continue
+                    
+                    self.logger.info(f'      📎 Extracted URL: {iframe_src[:80]}...')
                     
                     # QUICK VALIDATION (instant)
                     quick_valid, quick_reason = self.quick_validate_url(iframe_src)
@@ -386,11 +417,11 @@ class OneFlixUltimateSpider(scrapy.Spider):
                         self.stats['broken_links'] += 1
                         
                 except Exception as e:
-                    self.logger.warning(f'      ⚠️  Error with {srv_name}: {str(e)[:50]}')
+                    self.logger.warning(f'      ⚠️  Error with {srv_name}: {str(e)[:100]}')
                 finally:
                     try:
                         self.driver.get(movie_page_url)
-                        time.sleep(1)
+                        time.sleep(2)
                     except:
                         pass
             

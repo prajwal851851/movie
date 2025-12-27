@@ -28,8 +28,8 @@ class Command(BaseCommand):
             '--spider',
             type=str,
             default='archive',
-            choices=['archive', 'makemovies', 'goojara', 'goojara_v2','sflix', 'oneflix_ultimate', 'all'],
-            help='Which spider to run (archive, makemovies, goojara, goojara_v2, m4uhd, oneflix_ultimate, or all)'
+            choices=['archive', 'makemovies', 'goojara', 'goojara_v2','sflix', 'oneflix_ultimate', 'oneflix_network', 'tmdb_vidsrc', 'all'],
+            help='Which spider to run (archive, makemovies, goojara, goojara_v2, m4uhd, oneflix_ultimate, oneflix_network, tmdb_vidsrc, or all)'
         )
         parser.add_argument(
             '--limit',
@@ -42,6 +42,12 @@ class Command(BaseCommand):
             type=int,
             default=5,
             help='Maximum number of pages to scrape per URL (for pagination support)'
+        )
+        parser.add_argument(
+            '--api-key',
+            type=str,
+            default=None,
+            help='TMDB API key (required for tmdb_vidsrc spider)'
         )
 
     def handle(self, *args, **options):
@@ -64,13 +70,20 @@ class Command(BaseCommand):
         goojara_v2_module = importlib.import_module('scraper.spiders.goojara_spider_v2')
         GoojaraSpiderV2 = goojara_v2_module.GoojaraSpiderFixed
 
-        # Import 1Flix spider
+        # Import 1Flix spiders
         oneflix_module = importlib.import_module('scraper.spiders.oneflix_ultimate')
         OneFlixUltimateSpider = oneflix_module.OneFlixUltimateSpider
+        
+        oneflix_network_module = importlib.import_module('scraper.spiders.oneflix_network_capture')
+        OneflixNetworkCaptureSpider = oneflix_network_module.OneflixNetworkCaptureSpider
         
         # FIX: Corrected the class name to match the definition in sflix_spider.py
         sflix_module = importlib.import_module('scraper.spiders.sflix_spider')
         SflixSpider = sflix_module.SflixSpider
+        
+        # Import TMDB-VidSrc spider
+        tmdb_module = importlib.import_module('scraper.spiders.tmdb_vidsrc_spider')
+        TmdbVidsrcSpider = tmdb_module.TmdbVidsrcSpider
 
         #m4uhd_module = importlib.import_module('scraper.spiders.m4uhd_spider')
         #M4uhdSpider = m4uhd_module.M4uhdSpider
@@ -111,6 +124,15 @@ class Command(BaseCommand):
             if spider_choice == 'oneflix_ultimate' or spider_choice == 'all':
                 self.stdout.write('Adding 1Flix Ultimate spider (UpCloud/MegaCloud/VidCloud)...')
                 process.crawl(OneFlixUltimateSpider, limit=limit, max_pages=max_pages)
+            
+            if spider_choice == 'oneflix_network':
+                self.stdout.write('Adding 1Flix Network Capture spider (Advanced URL Extraction)...')
+                process.crawl(OneflixNetworkCaptureSpider, limit=limit, max_pages=max_pages)
+            
+            if spider_choice == 'tmdb_vidsrc':
+                api_key = options.get('api_key') or '9c179ef2342597bccad54c238061343e'
+                self.stdout.write('Adding TMDB-VidSrc spider (API-based, no scraping)...')
+                process.crawl(TmdbVidsrcSpider, api_key=api_key, limit=limit, max_pages=max_pages)
 
             self.stdout.write(self.style.SUCCESS('\nStarting crawl...'))
             process.start()

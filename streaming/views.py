@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.db import models
 from .models import Movie, StreamingLink
 from .serializers import MovieSerializer
@@ -131,10 +132,12 @@ class MovieWatchView(APIView):
             'upstream',
             'myvidplay.com',
             'vidplay',
+            # NOTE: sysmeasuring removed - URLs in DB are incomplete (just domain, no path)
+            # Need to re-scrape to get full embed URLs
         ]
         
         print(f"\n{'='*60}")
-        print(f"🎬 Processing movie: {movie.title}")
+        print(f"Processing movie: {movie.title}")
         print(f"{'='*60}")
         
         for link in data.get('links', []):
@@ -173,6 +176,9 @@ class MovieWatchView(APIView):
         return Response(data)
 
 
+
+@xframe_options_exempt
+@require_http_methods(["GET"])
 def player_proxy(request, imdb_id, link_id):
     """
     Enhanced proxy that fetches embed page content and bypasses sandbox/CORS restrictions
@@ -202,22 +208,49 @@ def player_proxy(request, imdb_id, link_id):
             parsed_url = urlparse(link.stream_url)
             base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
             
-            # Clean HTML: Remove sandbox detection scripts
-            # Remove scripts that check for sandbox, adblock, or iframe restrictions
+            # SELECTIVE SCRIPT REMOVAL - Remove ONLY obvious ad scripts
             import re
             
-            # Remove specific anti-bot/sandbox detection scripts
-            patterns_to_remove = [
-                r'<script[^>]*>.*?sandbox.*?</script>',
-                r'<script[^>]*>.*?adblock.*?</script>',
-                r'<script[^>]*>.*?AdBlock.*?</script>',
-                r'<script[^>]*src=["\'][^"\']*new100\.js["\'][^>]*>.*?</script>',
-                r'<script[^>]*src=["\'][^"\']*chext_loader\.js["\'][^>]*>.*?</script>',
+            cleaned_html = embed_html
+            
+            # Step 1: Remove ONLY external scripts from known ad domains
+            ad_domains = [
+                'doubleclick', 'googlesyndication', 'adservice', 'adsense',
+                'topworkredbay', 'popads', 'popcash', 'adnxs', 'advertising',
+                'taboola', 'outbrain', 'criteo', 'pubmatic', 'openx'
             ]
             
-            cleaned_html = embed_html
-            for pattern in patterns_to_remove:
-                cleaned_html = re.sub(pattern, '', cleaned_html, flags=re.IGNORECASE | re.DOTALL)
+            # Find all script tags with src
+            external_scripts = re.findall(r'<script[^>]*src=["\'][^"\']*["\'][^>]*>.*?</script>', cleaned_html, re.IGNORECASE | re.DOTALL)
+            for script in external_scripts:
+                # Check if it's from an ad domain
+                script_lower = script.lower()
+                if any(ad_domain in script_lower for ad_domain in ad_domains):
+                    cleaned_html = cleaned_html.replace(script, '')
+                    
+            # Step 2: Remove ONLY inline scripts that explicitly call window.open or do redirects
+            # Be very specific to avoid breaking video player scripts
+            inline_scripts = re.findall(r'<script(?![^>]*src)[^>]*>.*?</script>', cleaned_html, re.IGNORECASE | re.DOTALL)
+            for script in inline_scripts:
+                script_content = script.lower()
+                # Only remove if it has BOTH popup/redirect AND is very short (likely just an ad trigger)
+                has_popup = 'window.open(' in script_content or 'window.open (' in script_content
+                has_redirect = 'location.href=' in script_content or 'location.replace(' in script_content
+                is_short = len(script) < 500  # Short scripts are likely just ad triggers
+                
+                if (has_popup or has_redirect) and is_short:
+                    cleaned_html = cleaned_html.replace(script, '')
+            
+            # Step 3: Remove ad iframes (but keep video iframes)
+            cleaned_html = re.sub(
+                r'<iframe[^>]*src=["\'][^"\']*(?:doubleclick|googlesyndication|adservice|popads)[^"\']*["\'][^>]*>.*?</iframe>',
+                '',
+                cleaned_html,
+                flags=re.IGNORECASE | re.DOTALL
+            )
+            
+            # Step 4: Remove meta refresh tags (used for redirects)
+            cleaned_html = re.sub(r'<meta[^>]*http-equiv=["\']refresh["\'][^>]*>', '', cleaned_html, flags=re.IGNORECASE)
             
             # Inject our custom HTML wrapper with anti-detection code
             html = f"""
@@ -252,16 +285,220 @@ def player_proxy(request, imdb_id, link_id):
             z-index: 9999;
             font-family: Arial, sans-serif;
         }}
-        /* Hide ads and popups */
+        /* AGGRESSIVE AD BLOCKING - Hide ads, popups, banners, and overlays */
         .ad, .ads, [class*="ad-"], [id*="ad-"],
-        [class*="popup"], [id*="popup"] {{
+        [class*="popup"], [id*="popup"],
+        [class*="banner"], [id*="banner"],
+        [class*="overlay"], [id*="overlay"],
+        [class*="sponsor"], [id*="sponsor"],
+        [class*="advertisement"], [id*="advertisement"] {{
             display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }}
+        
+        /* Hide common ad container patterns */
+        div[id^="ad"], div[class^="ad"],
+        div[id*="banner"], div[class*="banner"],
+        div[id*="popup"], div[class*="popup"] {{
+            display: none !important;
+        }}
+        
+        /* Prevent click-through overlays */
+        div[style*="position: absolute"][style*="z-index"] {{
+            pointer-events: none !important;
         }}
     </style>
     
     <script>
-        // ANTI-DETECTION: Override sandbox detection BEFORE any other scripts load
+        // IMMEDIATE POPUP BLOCKING - Run FIRST before ANY other scripts
         (function() {{
+            'use strict';
+            
+            // Block window.open IMMEDIATELY
+            const noop = function() {{ 
+                console.log('🚫 IMMEDIATE: Blocked window.open'); 
+                return null; 
+            }};
+            
+            window.open = noop;
+            window.showModalDialog = noop;
+            
+            // Prevent window.open from being redefined
+            Object.defineProperty(window, 'open', {{
+                value: noop,
+                writable: false,
+                configurable: false
+            }});
+            
+            // Block ALL event listeners that might open popups
+            const originalAddEventListener = EventTarget.prototype.addEventListener;
+            EventTarget.prototype.addEventListener = function(type, listener, options) {{
+                // If it's a click/mousedown event, wrap it to block popups
+                if (type === 'click' || type === 'mousedown' || type === 'mouseup' || type === 'touchstart') {{
+                    const wrappedListener = function(event) {{
+                        // Temporarily override window.open during this event
+                        const tempOpen = window.open;
+                        window.open = noop;
+                        
+                        try {{
+                            return listener.apply(this, arguments);
+                        }} finally {{
+                            window.open = noop; // Keep it blocked
+                        }}
+                    }};
+                    return originalAddEventListener.call(this, type, wrappedListener, options);
+                }}
+                return originalAddEventListener.call(this, type, listener, options);
+            }};
+            
+            console.log('🛡️ IMMEDIATE popup blocking active');
+        }})();
+    </script>
+    
+    <script>
+        // NUCLEAR AD BLOCKING - Execute BEFORE any other scripts
+        (function() {{
+            'use strict';
+            
+            console.log('🚀 Initializing nuclear ad-blocking...');
+            
+            
+            // ============================================
+            // PART 1: ULTRA-AGGRESSIVE CLICK BLOCKING
+            // ============================================
+            
+            // Block ALL clicks by default, only allow specific video controls
+            function blockAllClicksExceptVideo(e) {{
+                const target = e.target;
+                const tagName = target.tagName;
+                
+                // ONLY allow clicks on these specific elements
+                const allowedElements = [
+                    'VIDEO',           // The actual video element
+                    'BUTTON',          // Player control buttons
+                    'INPUT'            // Volume sliders, etc.
+                ];
+                
+                // Check if it's an allowed element
+                if (allowedElements.includes(tagName)) {{
+                    console.log('✅ Allowed click on:', tagName);
+                    return true;
+                }}
+                
+                // Check if it's a video control by class
+                const className = target.className || '';
+                const id = target.id || '';
+                
+                const isVideoControl = 
+                    className.includes('vjs-') ||      // Video.js controls
+                    className.includes('jw-') ||       // JW Player controls
+                    className.includes('plyr__') ||    // Plyr controls
+                    className.includes('dplayer-') ||  // DPlayer controls
+                    id.includes('control') ||
+                    id.includes('play') ||
+                    id.includes('pause') ||
+                    id.includes('volume');
+                
+                if (isVideoControl) {{
+                    console.log('✅ Allowed click on video control');
+                    return true;
+                }}
+                
+                // BLOCK EVERYTHING ELSE
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                console.log('🚫 BLOCKED click on:', tagName, className.substring(0, 30));
+                return false;
+            }}
+            
+            // Capture ALL click/mouse events at document level (useCapture = true runs FIRST)
+            document.addEventListener('click', blockAllClicksExceptVideo, true);
+            document.addEventListener('mousedown', blockAllClicksExceptVideo, true);
+            document.addEventListener('mouseup', blockAllClicksExceptVideo, true);
+            document.addEventListener('touchstart', blockAllClicksExceptVideo, true);
+            document.addEventListener('touchend', blockAllClicksExceptVideo, true);
+            
+            // Also block auxclick (middle/right click)
+            document.addEventListener('auxclick', function(e) {{
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                console.log('🚫 BLOCKED auxclick');
+                return false;
+            }}, true);
+            
+            // ============================================
+            // PART 2: SMART NAVIGATION LOCKDOWN
+            // ============================================
+            
+            // Override location methods without freezing (to avoid TypeError)
+            const originalReplace = window.location.replace;
+            const originalAssign = window.location.assign;
+            const originalReload = window.location.reload;
+            
+            // Block location.replace (used for redirects)
+            try {{
+                window.location.replace = function(url) {{
+                    // Allow same-origin navigation
+                    if (url && url.includes(window.location.hostname)) {{
+                        return originalReplace.call(window.location, url);
+                    }}
+                    console.log('🚫 Blocked location.replace to:', url);
+                    return false;
+                }};
+            }} catch(e) {{}}
+            
+            // Block location.assign
+            try {{
+                window.location.assign = function(url) {{
+                    if (url && url.includes(window.location.hostname)) {{
+                        return originalAssign.call(window.location, url);
+                    }}
+                    console.log('🚫 Blocked location.assign to:', url);
+                    return false;
+                }};
+            }} catch(e) {{}}
+            
+            // Monitor location.href changes
+            let currentHref = window.location.href;
+            setInterval(function() {{
+                if (window.location.href !== currentHref) {{
+                    console.log('🚫 Detected location.href change, reverting');
+                    window.location.href = currentHref;
+                }}
+            }}, 100);
+            
+            // Block history API
+            window.history.pushState = function() {{
+                console.log('🚫 Blocked history.pushState');
+                return false;
+            }};
+            window.history.replaceState = function() {{
+                console.log('🚫 Blocked history.replaceState');
+                return false;
+            }};
+            
+            // ============================================
+            // PART 3: POPUP BLOCKING
+            // ============================================
+            
+            window.open = function() {{ 
+                console.log('🚫 Blocked window.open popup'); 
+                return null; 
+            }};
+            
+            window.showModalDialog = function() {{
+                console.log('🚫 Blocked showModalDialog');
+                return null;
+            }};
+            
+            // ============================================
+            // PART 4: ANTI-DETECTION
+            // ============================================
+            
             // Override document.domain to prevent sandbox detection
             try {{
                 Object.defineProperty(document, 'domain', {{
@@ -274,26 +511,13 @@ def player_proxy(request, imdb_id, link_id):
             window.self = window.top;
             window.parent = window.top;
             
-            // Mock eval to always return true (some scripts check if eval is allowed)
-            const originalEval = window.eval;
-            window.eval = function() {{
-                try {{
-                    return originalEval.apply(this, arguments);
-                }} catch(e) {{
-                    return true;
-                }}
-            }};
-            
-            // Block popup attempts
-            window.open = function() {{ return null; }};
-            
             // Disable adblock detection
             Object.defineProperty(window, 'adblock', {{
                 get: function() {{ return false; }},
                 set: function() {{ return false; }}
             }});
             
-            console.log('Anti-detection measures activated');
+            console.log('✅ Nuclear ad-blocking initialized');
         }})();
     </script>
 </head>
@@ -308,31 +532,186 @@ def player_proxy(request, imdb_id, link_id):
     </div>
     
     <script>
-        // Additional runtime protections
+        // NUCLEAR RUNTIME PROTECTION - Continuous monitoring and removal
         (function() {{
-            // Remove any ad elements that load dynamically
-            setInterval(function() {{
-                const ads = document.querySelectorAll('.ad, .ads, [class*="ad-"], [id*="ad-"], [class*="popup"], [id*="popup"]');
-                ads.forEach(ad => ad.remove());
-            }}, 1000);
+            'use strict';
             
-            // Override any late-loading sandbox detection
-            setTimeout(function() {{
+            console.log('🛡️ Starting runtime protection...');
+            
+            // ============================================
+            // AGGRESSIVE IFRAME REMOVAL
+            // ============================================
+            
+            // Remove ALL iframes except video players (check every 200ms)
+            setInterval(function() {{
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {{
+                    const src = (iframe.src || '').toLowerCase();
+                    const id = (iframe.id || '').toLowerCase();
+                    const className = (iframe.className || '').toLowerCase();
+                    
+                    // Keep if it's clearly a video player
+                    const isVideoPlayer = 
+                        src.includes('player') ||
+                        src.includes('embed') ||
+                        src.includes('video') ||
+                        src.includes('/e/') ||  // Common video embed path
+                        src.includes('/v/') ||  // Common video embed path
+                        id.includes('player') ||
+                        id.includes('video') ||
+                        className.includes('player') ||
+                        className.includes('video');
+                    
+                    // Remove ONLY if it's clearly an ad
+                    const isAd = 
+                        src.includes('ad') || 
+                        src.includes('popup') || 
+                        src.includes('banner') ||
+                        src.includes('doubleclick') ||
+                        src.includes('googlesyndication') ||
+                        src.includes('adservice') ||
+                        src.includes('popads');
+                    
+                    if (isAd && !isVideoPlayer) {{
+                        iframe.remove();
+                        console.log('🗑️ Removed ad iframe:', src.substring(0, 50));
+                    }}
+                }});
+            }}, 200); // Check every 200ms
+            
+            // ============================================
+            // AGGRESSIVE AD ELEMENT REMOVAL
+            // ============================================
+            
+            setInterval(function() {{
+                // Remove ALL anchor tags (ads use <a> tags for clickable overlays)
+                const links = document.querySelectorAll('a');
+                links.forEach(link => {{
+                    // Keep ONLY if it's clearly not an ad
+                    const href = (link.href || '').toLowerCase();
+                    const isInternal = href.includes(window.location.hostname) || href === '';
+                    
+                    // Remove ALL external links (they're all ads)
+                    if (!isInternal) {{
+                        link.remove();
+                        console.log('🗑️ Removed ad link');
+                    }}
+                }});
+                
+                // Remove ad elements by class/id
+                const ads = document.querySelectorAll(
+                    '.ad, .ads, [class*="ad-"], [id*="ad-"], ' +
+                    '[class*="popup"], [id*="popup"], ' +
+                    '[class*="banner"], [id*="banner"], ' +
+                    '[class*="overlay"], [id*="overlay"]'
+                );
+                ads.forEach(ad => {{
+                    // Only remove if it's not the video player
+                    if (!ad.querySelector('video') && !ad.closest('video')) {{
+                        ad.remove();
+                    }}
+                }});
+                
+                // Remove ALL divs with position:absolute that cover the whole screen (ad overlays)
+                const allDivs = document.querySelectorAll('div');
+                allDivs.forEach(div => {{
+                    const style = window.getComputedStyle(div);
+                    const position = style.position;
+                    const zIndex = parseInt(style.zIndex) || 0;
+                    const width = parseInt(style.width) || 0;
+                    const height = parseInt(style.height) || 0;
+                    
+                    // Remove if it's a full-screen overlay with high z-index (likely an ad)
+                    if (position === 'absolute' && zIndex > 100 && width > 300 && height > 300) {{
+                        // Don't remove if it contains video
+                        if (!div.querySelector('video')) {{
+                            div.remove();
+                            console.log('🗑️ Removed overlay div');
+                        }}
+                    }}
+                }});
+            }}, 100); // Check every 100ms for aggressive removal
+            
+            // ============================================
+            // MUTATION OBSERVER - Block injected scripts
+            // ============================================
+            
+            const observer = new MutationObserver(function(mutations) {{
+                mutations.forEach(function(mutation) {{
+                    mutation.addedNodes.forEach(function(node) {{
+                        // Block injected scripts
+                        if (node.tagName === 'SCRIPT') {{
+                            const src = (node.src || '').toLowerCase();
+                            const content = (node.textContent || '').toLowerCase();
+                            
+                            // Block if it's an ad script
+                            if (src.includes('ad') || src.includes('popup') || 
+                                src.includes('topworkredbay') || src.includes('popads') ||
+                                content.includes('window.open') || content.includes('popup') ||
+                                content.includes('location.href') || content.includes('redirect')) {{
+                                node.remove();
+                                console.log('🚫 Blocked injected script');
+                            }}
+                        }}
+                        
+                        // Block injected iframes
+                        if (node.tagName === 'IFRAME') {{
+                            const src = (node.src || '').toLowerCase();
+                            if (!src.includes('player') && !src.includes('video')) {{
+                                node.remove();
+                                console.log('🚫 Blocked injected iframe');
+                            }}
+                        }}
+                    }});
+                }});
+            }});
+            
+            observer.observe(document.documentElement, {{
+                childList: true,
+                subtree: true
+            }});
+            
+            // ============================================
+            // RE-ENFORCE PROTECTIONS
+            // ============================================
+            
+            // Re-block window.open every second (in case it's overridden)
+            setInterval(function() {{
+                window.open = function() {{ 
+                    console.log('🚫 Blocked late popup attempt'); 
+                    return null; 
+                }};
+                
+                // Re-enforce iframe/sandbox detection blocks
                 window.self = window.top;
                 window.parent = window.top;
-            }}, 100);
+            }}, 1000);
             
-            console.log('Proxy player loaded successfully');
+            console.log('✅ Runtime protection active');
         }})();
     </script>
 </body>
 </html>
             """
             
-            # Create response with CORS bypass headers
+            # Create response with balanced security headers
             django_response = HttpResponse(html)
-            django_response['X-Frame-Options'] = 'SAMEORIGIN'
-            django_response['Content-Security-Policy'] = "frame-ancestors 'self'"
+            
+            # Balanced Content Security Policy - Allow video resources but block ads
+            django_response['Content-Security-Policy'] = (
+                "default-src 'self' https:; "  # Allow HTTPS by default
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "  # Allow scripts for player
+                "style-src 'self' 'unsafe-inline' https:; "  # Allow external stylesheets
+                "img-src 'self' data: https: http: blob:; "  # Allow images
+                "media-src 'self' https: http: blob: data:; "  # Allow video from any source
+                "connect-src 'self' https: http:; "  # Allow connections
+                "font-src 'self' https: data:; "  # Allow fonts
+                "frame-src 'self' https: http:; "  # Allow iframes for video (our JS will filter ads)
+                "object-src 'none'; "  # Block plugins
+                "base-uri *; "  # Allow base tag (needed for relative URLs)
+            )
+            
+            # CORS bypass headers
             django_response['Access-Control-Allow-Origin'] = '*'
             django_response['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
             django_response['Access-Control-Allow-Headers'] = '*'

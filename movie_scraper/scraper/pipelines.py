@@ -124,7 +124,7 @@ class DjangoItemPipeline:
             else:
                 spider.logger.info(f'✓ Updated {link.server_name} link for {movie.title}')
 
-        return adapter._item
+        return adapter.item
 
     def _log_failed_item(self, adapter, spider):
         """

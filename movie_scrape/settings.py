@@ -138,4 +138,6 @@ USE_TZ = True
 
 # Keep a single STATIC_URL definition
 
+# Allow iframe embedding for proxy player
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
