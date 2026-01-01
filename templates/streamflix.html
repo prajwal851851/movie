@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamFlix - Movie & TV Streaming</title>
+    <link rel="stylesheet" href="/static/css/streamflix.css">
+</head>
+
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">S</span>
+                <span class="logo-text">StreamFlix</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <a href="#" class="nav-item" onclick="showPage('search'); return false;">
+                    <span class="nav-icon">🔍</span>
+                    <span class="nav-text">Search</span>
+                </a>
+                <a href="#" class="nav-item active" onclick="showPage('home'); return false;">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('movies'); return false;">
+                    <span class="nav-icon">🎬</span>
+                    <span class="nav-text">Movies</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('series'); return false;">
+                    <span class="nav-icon">📺</span>
+                    <span class="nav-text">TV Shows</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('shuffle'); return false;">
+                    <span class="nav-icon">🎲</span>
+                    <span class="nav-text">Shuffle</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('trending'); return false;">
+                    <span class="nav-icon">🔥</span>
+                    <span class="nav-text">Trending</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('categories'); return false;">
+                    <span class="nav-icon">📂</span>
+                    <span class="nav-text">Categories</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('forkids'); return false;">
+                    <span class="nav-icon">👶</span>
+                    <span class="nav-text">For Kids</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">MY LIBRARY</div>
+                <a href="#" class="nav-item" onclick="showPage('mylist'); return false;">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">My List</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('history'); return false;">
+                    <span class="nav-icon">🕐</span>
+                    <span class="nav-text">History</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('favorites'); return false;">
+                    <span class="nav-icon">❤️</span>
+                    <span class="nav-text">Favorites</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showPage('downloads'); return false;">
+                    <span class="nav-icon">⬇️</span>
+                    <span class="nav-text">Downloads</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="#" class="nav-item" onclick="showPage('settings'); return false;">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-text">Settings</span>
+            </a>
+            <a href="#" class="nav-item" onclick="toggleSidebar(); return false;">
+                <span class="nav-icon">◀️</span>
+                <span class="nav-text">Collapse</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Navigation Bar -->
+        <header class="top-nav">
+            <div class="top-nav-left">
+                <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            </div>
+            <div class="top-nav-right">
+                <button class="icon-btn">🔍</button>
+                <button class="icon-btn notification-btn">
+                    🔔
+                    <span class="notification-badge">3</span>
+                </button>
+                <div class="user-profile" onclick="toggleUserDropdown()">
+                    <div class="user-avatar">J</div>
+                    <span class="user-name">John</span>
+                    <span class="dropdown-arrow">▼</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- User Profile Dropdown -->
+        <div class="user-dropdown" id="userDropdown">
+            <div class="dropdown-section">
+                <div class="dropdown-title">Switch Profile</div>
+                <div class="profile-list">
+                    <div class="profile-item active">
+                        <div class="profile-avatar">J</div>
+                        <span>John</span>
+                    </div>
+                    <div class="profile-item">
+                        <div class="profile-avatar">S</div>
+                        <span>Sarah</span>
+                    </div>
+                    <div class="profile-item">
+                        <div class="profile-avatar">K</div>
+                        <span>Kids</span>
+                    </div>
+                    <div class="profile-item add-profile">
+                        <div class="profile-avatar">+</div>
+                        <span>Add Profile</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-section">
+                <a href="#" class="dropdown-item" onclick="showPage('settings'); closeUserDropdown(); return false;">
+                    <span class="dropdown-icon">👤</span>
+                    <span>Manage Profile</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">➕</span>
+                    <span>My List</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">❤️</span>
+                    <span>Favorites</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">🕐</span>
+                    <span>Watch History</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">⬇️</span>
+                    <span>Downloads</span>
+                </a>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-section">
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">🌐</span>
+                    <span>Language</span>
+                    <span class="dropdown-arrow-right">▶</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">💬</span>
+                    <span>Subtitles</span>
+                    <span class="dropdown-arrow-right">▶</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">🌙</span>
+                    <span>Dark Mode</span>
+                    <label class="toggle-switch-small">
+                        <input type="checkbox" checked>
+                        <span class="toggle-slider-small"></span>
+                    </label>
+                </a>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-section">
+                <a href="#" class="dropdown-item" onclick="showPage('settings'); closeUserDropdown(); return false;">
+                    <span class="dropdown-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">🔔</span>
+                    <span>Notifications</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">💳</span>
+                    <span>Subscription</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">❓</span>
+                    <span>FAQ</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <span class="dropdown-icon">💬</span>
+                    <span>Help Center</span>
+                </a>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-section">
+                <a href="#" class="dropdown-item sign-out">
+                    <span class="dropdown-icon">🚪</span>
+                    <span>Sign Out</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Page Content Container -->
+        <div class="content-wrapper">
+            <!-- Home/Browse Page -->
+            <div id="home-page" class="page-content active">
+                <div class="page-header">
+                    <h1>🏠 Home</h1>
+                </div>
+
+                <!-- Filters and Search -->
+                <div class="controls-wrapper">
+                    <div class="search-controls">
+                        <input type="text" id="home-search-input" placeholder="Search movies or series..."
+                            onkeypress="handlePageSearchKeypress(event, 'home')">
+                        <button onclick="performPageSearch('home')" class="btn-search">🔍</button>
+                        <button onclick="clearPageSearch('home')" class="btn-clear">✖</button>
+                    </div>
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <label>Source:</label>
+                            <select id="home-source-filter" onchange="filterPageBySource('home')">
+                                <option value="">All Sources</option>
+                                <option value="1flix.to">1Flix</option>
+                                <option value="goojara.to">Goojara</option>
+                                <option value="sflix.ps">Sflix</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Year:</label>
+                            <select id="home-year-filter" onchange="filterPageByYear('home')">
+                                <option value="">All Years</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Movies</span>
+                        <span class="stat-value" id="total-movies">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">With Links</span>
+                        <span class="stat-value" id="movies-with-links">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Status</span>
+                        <span class="stat-value" id="status-indicator">Ready</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-controls">
+                    <button onclick="refreshAllMovies()" class="btn-refresh">🔄 Refresh All Sites</button>
+                </div>
+
+                <p id="status" class="status-message"></p>
+
+                <!-- Navigation Tabs -->
+                <div class="nav-tabs">
+                    <button onclick="showHomeContentType('movies')" id="home-movies-nav-btn" class="nav-btn active">🎬
+                        Movies</button>
+                    <button onclick="showHomeContentType('series')" id="home-series-nav-btn" class="nav-btn">📺
+                        Series</button>
+                </div>
+
+                <!-- Movies Section -->
+                <div id="home-movies-section" class="content-section active">
+                    <h2>🎬 All Movies</h2>
+                    <div id="home-movie-list" class="movie-grid">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <p>Loading movies...</p>
+                        </div>
+                    </div>
+                    <div id="home-load-more-movies-container" class="load-more-container">
+                        <button id="home-load-more-movies-btn" class="load-more-btn"
+                            onclick="loadMorePageContent('home', 'movies')">
+                            Load More Movies
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Series Section -->
+                <div id="home-series-section" class="content-section">
+                    <h2>📺 All Series</h2>
+                    <div id="home-series-list" class="movie-grid">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <p>Loading series...</p>
+                        </div>
+                    </div>
+                    <div id="home-load-more-series-container" class="load-more-container">
+                        <button id="home-load-more-series-btn" class="load-more-btn"
+                            onclick="loadMorePageContent('home', 'series')">
+                            Load More Series
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Movies Only Page -->
+            <div id="movies-only-page" class="page-content">
+                <div class="page-header">
+                    <h1>🎬 Movies</h1>
+                </div>
+
+                <!-- Filters and Search -->
+                <div class="controls-wrapper">
+                    <div class="search-controls">
+                        <input type="text" id="movies-only-search-input" placeholder="Search movies..."
+                            onkeypress="handlePageSearchKeypress(event, 'movies-only')">
+                        <button onclick="performPageSearch('movies-only')" class="btn-search">🔍</button>
+                        <button onclick="clearPageSearch('movies-only')" class="btn-clear">✖</button>
+                    </div>
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <label>Source:</label>
+                            <select id="movies-only-source-filter" onchange="filterPageBySource('movies-only')">
+                                <option value="">All Sources</option>
+                                <option value="1flix.to">1Flix</option>
+                                <option value="goojara.to">Goojara</option>
+                                <option value="sflix.ps">Sflix</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Year:</label>
+                            <select id="movies-only-year-filter" onchange="filterPageByYear('movies-only')">
+                                <option value="">All Years</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <h2>All Movies</h2>
+                <div id="movies-only-list" class="movie-grid">
+                    <div class="loading-container">
+                        <div class="loading-spinner"></div>
+                        <p>Loading movies...</p>
+                    </div>
+                </div>
+                <div id="movies-only-load-more-container" class="load-more-container">
+                    <button id="movies-only-load-more-btn" class="load-more-btn"
+                        onclick="loadMorePageContent('movies-only', 'movies')">
+                        Load More Movies
+                    </button>
+                </div>
+            </div>
+
+            <!-- TV Shows Only Page -->
+            <div id="series-only-page" class="page-content">
+                <div class="page-header">
+                    <h1>📺 TV Shows</h1>
+                </div>
+
+                <!-- Filters and Search -->
+                <div class="controls-wrapper">
+                    <div class="search-controls">
+                        <input type="text" id="series-only-search-input" placeholder="Search TV shows..."
+                            onkeypress="handlePageSearchKeypress(event, 'series-only')">
+                        <button onclick="performPageSearch('series-only')" class="btn-search">🔍</button>
+                        <button onclick="clearPageSearch('series-only')" class="btn-clear">✖</button>
+                    </div>
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <label>Source:</label>
+                            <select id="series-only-source-filter" onchange="filterPageBySource('series-only')">
+                                <option value="">All Sources</option>
+                                <option value="1flix.to">1Flix</option>
+                                <option value="goojara.to">Goojara</option>
+                                <option value="sflix.ps">Sflix</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Year:</label>
+                            <select id="series-only-year-filter" onchange="filterPageByYear('series-only')">
+                                <option value="">All Years</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <h2>All TV Shows</h2>
+                <div id="series-only-list" class="movie-grid">
+                    <div class="loading-container">
+                        <div class="loading-spinner"></div>
+                        <p>Loading TV shows...</p>
+                    </div>
+                </div>
+                <div id="series-only-load-more-container" class="load-more-container">
+                    <button id="series-only-load-more-btn" class="load-more-btn"
+                        onclick="loadMorePageContent('series-only', 'series')">
+                        Load More TV Shows
+                    </button>
+                </div>
+            </div>
+
+            <!-- Trending Page (2025 Movies) -->
+            <div id="trending-page" class="page-content">
+                <div class="page-header">
+                    <h1>🔥 Trending</h1>
+                    <p style="color: var(--text-secondary); margin-top: 10px;">Movies from 2025</p>
+                </div>
+
+                <h2>2025 Movies</h2>
+                <div id="trending-list" class="movie-grid">
+                    <div class="loading-container">
+                        <div class="loading-spinner"></div>
+                        <p>Loading trending movies...</p>
+                    </div>
+                </div>
+                <div id="trending-load-more-container" class="load-more-container">
+                    <button id="trending-load-more-btn" class="load-more-btn"
+                        onclick="loadMorePageContent('trending', 'movies')">
+                        Load More
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings-page" class="page-content">
+                <div class="page-header">
+                    <h1>⚙️ Settings</h1>
+                </div>
+
+                <div class="settings-container">
+                    <!-- Account Section -->
+                    <div class="settings-section">
+                        <h2>Account</h2>
+                        <p class="section-description">Manage your account settings</p>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Profile Settings</div>
+                                <div class="settings-item-desc">Edit your profile information</div>
+                            </div>
+                            <button class="btn-manage">Manage</button>
+                        </div>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Subscription</div>
+                                <div class="settings-item-desc">Premium Plan • $15.99/month</div>
+                            </div>
+                            <button class="btn-manage">Change Plan</button>
+                        </div>
+                    </div>
+
+                    <!-- Appearance Section -->
+                    <div class="settings-section">
+                        <h2>Appearance</h2>
+                        <p class="section-description">Customize how StreamFlix looks</p>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Dark Mode</div>
+                                <div class="settings-item-desc">Use dark theme</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="dark-mode-toggle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Language</div>
+                                <div class="settings-item-desc">Choose your preferred language</div>
+                            </div>
+                            <select class="settings-select">
+                                <option>English</option>
+                                <option>Spanish</option>
+                                <option>French</option>
+                                <option>German</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Playback Section -->
+                    <div class="settings-section">
+                        <h2>Playback</h2>
+                        <p class="section-description">Control how content plays</p>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Default Quality</div>
+                                <div class="settings-item-desc">Set your preferred video quality</div>
+                            </div>
+                            <select class="settings-select">
+                                <option>Auto</option>
+                                <option>1080p</option>
+                                <option>720p</option>
+                                <option>480p</option>
+                            </select>
+                        </div>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Autoplay Next Episode</div>
+                                <div class="settings-item-desc">Automatically play next episode</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Continue Watching</div>
+                                <div class="settings-item-desc">Resume where you left off</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Privacy & Security Section -->
+                    <div class="settings-section">
+                        <h2>Privacy & Security</h2>
+                        <p class="section-description">Manage your privacy settings</p>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Watch History</div>
+                                <div class="settings-item-desc">Save what you watch</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Personalized Recommendations</div>
+                                <div class="settings-item-desc">Get content suggestions based on your activity</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Age-Restricted Content Online</div>
+                                <div class="settings-item-desc">Show mature content</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone Section -->
+                    <div class="settings-section danger-zone">
+                        <h2>Danger Zone</h2>
+                        <p class="section-description">Irreversible actions</p>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Clear Watch History</div>
+                                <div class="settings-item-desc">Permanently delete all watch history</div>
+                            </div>
+                            <button class="btn-danger-outline">Clear</button>
+                        </div>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <div class="settings-item-title">Delete Account</div>
+                                <div class="settings-item-desc">Permanently delete your account</div>
+                            </div>
+                            <button class="btn-danger">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shuffle/Random Pick Page -->
+            <div id="shuffle-page" class="page-content">
+                <div class="shuffle-container">
+                    <div class="shuffle-icon">🎲</div>
+                    <h1 class="shuffle-title">Random Pick</h1>
+                    <p class="shuffle-subtitle">Can't decide what to watch? Let us pick for you!</p>
+
+                    <div id="shuffle-content" class="shuffle-content">
+                        <p class="shuffle-empty">No movies to shuffle yet.</p>
+                    </div>
+
+                    <div class="shuffle-actions">
+                        <button class="btn-shuffle" onclick="shuffleMovie()">
+                            <span class="btn-icon">🔀</span>
+                            Shuffle Again
+                        </button>
+                        <button class="btn-watch-now" onclick="watchShuffledMovie()" id="watch-shuffled-btn"
+                            style="display: none;">
+                            <span class="btn-icon">▶️</span>
+                            Watch Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Movie Watch Modal -->
+    <div id="watchModal" class="modal">
+        <div class="modal-content-wide">
+            <span class="close" onclick="closeWatchModal()">&times;</span>
+
+            <div class="player-layout">
+                <!-- Left: Video Player -->
+                <div class="player-main">
+                    <div class="player-tabs">
+                        <button class="player-tab active">Auto</button>
+                        <button class="player-tab">Movie</button>
+                    </div>
+
+                    <div class="player-container">
+                        <div id="iframe-loading" class="loading-overlay">
+                            <div class="loading-spinner"></div>
+                            <p>Loading player...</p>
+                        </div>
+                        <div id="player-error" class="error-message" style="display: none;">
+                            ⚠️ Unable to load video. Try another server.
+                        </div>
+                        <iframe id="embed-player" allowfullscreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                    </div>
+
+                    <div class="movie-info">
+                        <h2 id="modal-title"></h2>
+                        <p id="modal-synopsis" class="synopsis"></p>
+                    </div>
+                </div>
+
+                <!-- Right: Available Links Sidebar -->
+                <div class="links-sidebar">
+                    <h3 class="links-title">Available Links</h3>
+                    <div id="server-list" class="links-list">
+                        <!-- Links will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Series Modal -->
+    <div id="seriesModal" class="modal">
+        <div class="modal-content-wide">
+            <span class="close-series" onclick="closeSeriesModal()">&times;</span>
+
+            <div class="player-layout">
+                <!-- Left: Video Player -->
+                <div class="player-main">
+                    <h2 id="series-modal-title"></h2>
+
+                    <div class="episode-selector">
+                        <div class="select-group">
+                            <label>Season:</label>
+                            <select id="season-select"></select>
+                        </div>
+                        <div class="select-group">
+                            <label>Episode:</label>
+                            <select id="episode-select"></select>
+                        </div>
+                        <button onclick="playSelectedEpisode()" class="btn-play-episode">
+                            ▶️ Play Episode
+                        </button>
+                    </div>
+
+                    <div class="player-container">
+                        <div id="series-iframe-loading" class="loading-overlay">
+                            <div class="loading-spinner"></div>
+                            <p>Loading player...</p>
+                        </div>
+                        <div id="series-player-error" class="error-message" style="display: none;">
+                            ⚠️ Unable to load video. Try another server.
+                        </div>
+                        <iframe id="series-embed-player" allowfullscreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                    </div>
+                </div>
+
+                <!-- Right: Available Links Sidebar -->
+                <div class="links-sidebar">
+                    <h3 class="links-title">Available Links</h3>
+                    <div id="series-server-list" class="links-list">
+                        <!-- Links will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ad-Blocker Suggestion Modal -->
+    <div id="adBlockerModal" class="suggestion-modal">
+        <div class="suggestion-modal-content">
+            <button class="suggestion-close" onclick="closeAdBlockerSuggestion()">&times;</button>
+            <h2 class="suggestion-title">Please use ad blocker or use Brave browser for ads free experiences</h2>
+            <div class="suggestion-actions">
+                <a href="https://brave.com" target="_blank" rel="noopener" class="suggestion-btn brave-btn">
+                    <span class="btn-icon">🦁</span>
+                    <span class="btn-text">
+                        <strong>Brave Browser</strong>
+                        <small>Built-in ad blocking</small>
+                    </span>
+                </a>
+                <a href="https://ublockorigin.com" target="_blank" rel="noopener" class="suggestion-btn ublock-btn">
+                    <span class="btn-icon">🛡️</span>
+                    <span class="btn-text">
+                        <strong>uBlock Origin</strong>
+                        <small>Best ad blocker extension</small>
+                    </span>
+                </a>
+            </div>
+            <button class="suggestion-dismiss" onclick="closeAdBlockerSuggestion()">Maybe later</button>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Page-specific state management
+        const pageStates = {
+            'home': { contentType: 'movies', movies: [], series: [], movieOffset: 0, seriesOffset: 0, hasMoreMovies: true, hasMoreSeries: true },
+            'movies-only': { movies: [], movieOffset: 0, hasMoreMovies: true },
+            'series-only': { series: [], seriesOffset: 0, hasMoreSeries: true },
+            'trending': { movies: [], movieOffset: 0, hasMoreMovies: true }
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPageContent('home', 'movies');
+            populateYearFilter();
+            fetchStats();
+        });
+
+        // Page navigation
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+
+            // Remove active class from all nav items
+            document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Map navigation to actual pages
+            const pageMap = {
+                'home': 'home-page',
+                'movies': 'movies-only-page',
+                'series': 'series-only-page',
+                'settings': 'settings-page',
+                'shuffle': 'shuffle-page',
+                'trending': 'trending-page',
+                'categories': 'home-page',
+                'forkids': 'home-page',
+                'mylist': 'home-page',
+                'history': 'home-page',
+                'favorites': 'home-page',
+                'downloads': 'home-page',
+                'search': 'home-page'
+            };
+
+            const pageId = pageMap[pageName] || 'home-page';
+            const pageElement = document.getElementById(pageId);
+            if (pageElement) {
+                pageElement.classList.add('active');
+            }
+
+            // Set active nav item
+            if (event && event.target) {
+                const clickedItem = event.target.closest('.nav-item');
+                if (clickedItem) {
+                    clickedItem.classList.add('active');
+                }
+            }
+
+            // Load content for specific pages if not already loaded
+            if (pageName === 'movies' && pageStates['movies-only'].movies.length === 0) {
+                loadPageContent('movies-only', 'movies');
+            } else if (pageName === 'series' && pageStates['series-only'].series.length === 0) {
+                loadPageContent('series-only', 'series');
+            } else if (pageName === 'trending' && pageStates['trending'].movies.length === 0) {
+                loadPageContent('trending', 'movies');
+            }
+        }
+
+        // Home page tab switching
+        function showHomeContentType(type) {
+            document.querySelectorAll('#home-page .content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('#home-page .nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            pageStates.home.contentType = type;
+
+            if (type === 'movies') {
+                document.getElementById('home-movies-section').classList.add('active');
+                document.getElementById('home-movies-nav-btn').classList.add('active');
+                if (pageStates.home.movies.length === 0) loadPageContent('home', 'movies');
+            } else {
+                document.getElementById('home-series-section').classList.add('active');
+                document.getElementById('home-series-nav-btn').classList.add('active');
+                if (pageStates.home.series.length === 0) loadPageContent('home', 'series');
+            }
+        }
+
+        // Search and Filter logic
+        function handlePageSearchKeypress(event, page) {
+            if (event.key === 'Enter') performPageSearch(page);
+        }
+
+        function performPageSearch(page) {
+            const contentType = page === 'home' ? pageStates.home.contentType : (page === 'movies-only' ? 'movies' : 'series');
+            loadPageContent(page, contentType, false);
+        }
+
+        function clearPageSearch(page) {
+            const input = document.getElementById(`${page}-search-input`);
+            if (input) {
+                input.value = '';
+                performPageSearch(page);
+            }
+        }
+
+        function filterPageBySource(page) {
+            performPageSearch(page);
+        }
+
+        function filterPageByYear(page) {
+            performPageSearch(page);
+        }
+
+        // Load content for a specific page
+        async function loadPageContent(page, contentType, append = false) {
+            // FIX: Map 'movies' to 'movie' for API request
+            const apiType = contentType === 'movies' ? 'movie' : 'series';
+
+            const listId = page === 'home' ? `home-${apiType === 'movie' ? 'movie' : 'series'}-list` :
+                page === 'movies-only' ? 'movies-only-list' :
+                    page === 'series-only' ? 'series-only-list' :
+                        'trending-list';
+
+            const list = document.getElementById(listId);
+            if (!list) return;
+
+            if (!append) {
+                list.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div><p>Loading...</p></div>';
+            }
+
+            try {
+                const pageState = pageStates[page];
+                const offset = append ? (apiType === 'movie' ? pageState.movieOffset : pageState.seriesOffset) : 0;
+
+                // Construct URL with filters
+                let url = `/api/movies/?limit=12&offset=${offset}&content_type=${apiType}`;
+
+                const searchInput = document.getElementById(`${page}-search-input`);
+                const sourceFilter = document.getElementById(`${page}-source-filter`);
+                const yearFilter = document.getElementById(`${page}-year-filter`);
+
+                if (searchInput && searchInput.value) url += `&search=${encodeURIComponent(searchInput.value)}`;
+                if (sourceFilter && sourceFilter.value) url += `&source=${encodeURIComponent(sourceFilter.value)}`;
+                if (yearFilter && yearFilter.value) url += `&year=${yearFilter.value}`;
+
+                if (page === 'trending') url += '&year=2025';
+
+                const response = await fetch(url);
+                const data = await response.json();
+                const items = data.results || [];
+
+                // Store in page state
+                if (page === 'home') {
+                    if (apiType === 'movie') {
+                        pageStates.home.movies = append ? pageStates.home.movies.concat(items) : items;
+                        pageStates.home.movieOffset = pageStates.home.movies.length;
+                        pageStates.home.hasMoreMovies = data.next !== null;
+                    } else {
+                        pageStates.home.series = append ? pageStates.home.series.concat(items) : items;
+                        pageStates.home.seriesOffset = pageStates.home.series.length;
+                        pageStates.home.hasMoreSeries = data.next !== null;
+                    }
+                } else {
+                    const targetState = pageStates[page];
+                    if (apiType === 'movie') {
+                        targetState.movies = append ? targetState.movies.concat(items) : items;
+                        targetState.movieOffset = targetState.movies.length;
+                        targetState.hasMoreMovies = data.next !== null;
+                    } else {
+                        targetState.series = append ? targetState.series.concat(items) : items;
+                        targetState.seriesOffset = targetState.series.length;
+                        targetState.hasMoreSeries = data.next !== null;
+                    }
+                }
+
+                // Update legacy app.js state if it exists
+                if (typeof state !== 'undefined' && items.length > 0) {
+                    state.allMovies = Array.from(new Set([...state.allMovies, ...items]));
+                }
+
+                // Display content
+                if (apiType === 'movie') {
+                    displayPageMovies(page, items, append);
+                } else {
+                    displayPageSeries(page, items, append);
+                }
+
+                // Toggle load more container
+                const containerId = page === 'home' ? `home-load-more-${apiType === 'movie' ? 'movies' : 'series'}-container` :
+                    `${page}-load-more-container`;
+                const container = document.getElementById(containerId);
+                if (container) {
+                    container.style.display = (data.next !== null && items.length > 0) ? 'block' : 'none';
+                }
+
+            } catch (error) {
+                console.error(`Error loading ${contentType} for ${page}:`, error);
+                if (!append) {
+                    list.innerHTML = '<div class="loading-container"><p>Failed to load. Please try again.</p></div>';
+                }
+            }
+        }
+
+        function loadMorePageContent(page, contentType) {
+            loadPageContent(page, contentType, true);
+        }
+
+        // Display functions
+        function displayPageMovies(page, movies, append) {
+            const listId = page === 'home' ? 'home-movie-list' :
+                page === 'movies-only' ? 'movies-only-list' :
+                    'trending-list';
+            const list = document.getElementById(listId);
+            if (!list) return;
+
+            if (!append) list.innerHTML = '';
+            if (movies.length === 0 && !append) {
+                list.innerHTML = '<div class="loading-container"><p>No movies found.</p></div>';
+                return;
+            }
+
+            movies.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.innerHTML = `
+                    <div class="movie-poster">
+                        <img src="${movie.poster_url || '/static/images/no-poster.jpg'}" alt="${movie.title}" loading="lazy">
+                        <div class="movie-badge">${getSourceName(movie.source_site)}</div>
+                    </div>
+                    <div class="movie-info">
+                        <h3>${movie.title}</h3>
+                        <p>${movie.year || ''}</p>
+                    </div>
+                `;
+                card.onclick = () => openWatchModal(movie);
+                list.appendChild(card);
+            });
+        }
+
+        function displayPageSeries(page, seriesArray, append) {
+            const listId = page === 'home' ? 'home-series-list' : 'series-only-list';
+            const list = document.getElementById(listId);
+            if (!list) return;
+
+            if (!append) list.innerHTML = '';
+            if (seriesArray.length === 0 && !append) {
+                list.innerHTML = '<div class="loading-container"><p>No series found.</p></div>';
+                return;
+            }
+
+            // Group by series name
+            const grouped = {};
+            seriesArray.forEach(s => {
+                const baseName = s.title.split(' S')[0].trim();
+                if (!grouped[baseName]) grouped[baseName] = s;
+            });
+
+            Object.values(grouped).forEach(series => {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.innerHTML = `
+                    <div class="movie-poster">
+                        <img src="${series.poster_url || '/static/images/no-poster.jpg'}" alt="${series.title}" loading="lazy">
+                        <div class="movie-badge">${getSourceName(series.source_site)}</div>
+                    </div>
+                    <div class="movie-info">
+                        <h3>${series.title.split(' S')[0]}</h3>
+                        <p>TV Series</p>
+                    </div>
+                `;
+                card.onclick = () => openSeriesModal(series.title.split(' S')[0], seriesArray.filter(s => s.title.startsWith(series.title.split(' S')[0])));
+                list.appendChild(card);
+            });
+        }
+
+        function getSourceName(site) {
+            if (site.includes('1flix')) return '1FLIX';
+            if (site.includes('goojara')) return 'GJ';
+            if (site.includes('sflix')) return 'SF';
+            return site.toUpperCase();
+        }
+
+        // UI Handlers
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.querySelector('.main-content').classList.toggle('sidebar-collapsed');
+        }
+
+        function toggleUserDropdown() {
+            document.getElementById('userDropdown').classList.toggle('show');
+        }
+
+        function closeUserDropdown() {
+            document.getElementById('userDropdown').classList.remove('show');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.user-profile')) closeUserDropdown();
+        });
+
+        // Shuffle logic
+        let currentShuffledMovie = null;
+        async function shuffleMovie() {
+            const content = document.getElementById('shuffle-content');
+            const watchBtn = document.getElementById('watch-shuffled-btn');
+
+            content.innerHTML = '<div class="loading-spinner"></div><p>Picking something for you...</p>';
+            watchBtn.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/movies/?limit=1&offset=' + Math.floor(Math.random() * 100));
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    currentShuffledMovie = data.results[0];
+                    content.innerHTML = `
+                        <div class="shuffled-movie">
+                            <img src="${currentShuffledMovie.poster_url}" alt="${currentShuffledMovie.title}">
+                            <div class="shuffled-movie-info">
+                                <h3>${currentShuffledMovie.title} (${currentShuffledMovie.year})</h3>
+                                <p>${currentShuffledMovie.synopsis || 'Enjoy your random pick!'}</p>
+                            </div>
+                        </div>
+                    `;
+                    watchBtn.style.display = 'inline-flex';
+                } else {
+                    content.innerHTML = '<p>No movies found to shuffle.</p>';
+                }
+            } catch (error) {
+                content.innerHTML = '<p>Something went wrong. Try again!</p>';
+            }
+        }
+
+        function watchShuffledMovie() {
+            if (currentShuffledMovie) openWatchModal(currentShuffledMovie);
+        }
+
+        // Stats & Filters
+        async function populateYearFilter() {
+            try {
+                const res = await fetch('/api/movies/years/');
+                const years = await res.json();
+                document.querySelectorAll('select[id$="-year-filter"]').forEach(select => {
+                    years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y;
+                        opt.textContent = y;
+                        select.appendChild(opt);
+                    });
+                });
+            } catch (e) { }
+        }
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/movies/stats/');
+                const stats = await res.json();
+                document.getElementById('total-movies').textContent = stats.total_movies || 0;
+                document.getElementById('movies-with-links').textContent = stats.movies_with_links || 0;
+            } catch (e) { }
+        }
+
+        async function refreshAllMovies() {
+            document.getElementById('status').textContent = 'Updating database...';
+            try {
+                await fetch('/api/movies/refresh/', { method: 'POST' });
+                document.getElementById('status').textContent = 'Update started!';
+                setTimeout(() => document.getElementById('status').textContent = '', 3000);
+            } catch (e) {
+                document.getElementById('status').textContent = 'Failed to refresh.';
+            }
+        }
+    </script>
+</body>
+
+</html>

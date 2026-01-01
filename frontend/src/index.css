@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+    body {
+        @apply bg-dark-900 text-white font-sans antialiased;
+        width: 100%;
+        overflow-x: hidden;
+        /* Only hide horizontal on body */
+    }
+
+    * {
+        @apply scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-dark-900;
+    }
+}
+
+@layer components {
+    .btn-primary {
+        @apply bg-primary hover:bg-red-700 text-white font-semibold py-2 px-6 rounded transition-colors duration-300;
+    }
+
+    .btn-secondary {
+        @apply bg-dark-600 hover:bg-dark-500 text-white font-semibold py-2 px-6 rounded transition-colors duration-300;
+    }
+
+    .card-hover {
+        @apply transition-transform duration-300 hover:scale-105 hover:z-10;
+    }
+
+    .gradient-overlay {
+        @apply bg-gradient-to-t from-black via-black/50 to-transparent;
+    }
+
+    .text-shadow {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* Custom scrollbar styles */
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.scrollbar-thumb-dark-600::-webkit-scrollbar-thumb {
+    background-color: #404040;
+    border-radius: 3px;
+}
+
+.scrollbar-track-dark-900::-webkit-scrollbar-track {
+    background-color: #0a0a0a;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
+/* Hide scrollbar for carousel */
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    /* Prevents whole-page scrolling when at carousel edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 40px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out both;
+}
+
+.animate-slide-up {
+    animation: slideUp 0.6s ease-out both;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.5s ease-out both;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.4s ease-out both;
+}
+
+/* Glassmorphism */
+.glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+}
+
+.glass-dark {
+    @apply bg-black/40 backdrop-blur-xl border border-white/5;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}

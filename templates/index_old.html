@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Streamer - Fixed</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎬 Movie Aggregator</h1>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button onclick="showPage('movies')" id="movies-nav-btn" class="nav-btn active">🎬 Movies</button>
+            <button onclick="showPage('series')" id="series-nav-btn" class="nav-btn">📺 Series</button>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="controls-wrapper">
+            <div class="search-controls">
+                <input type="text" id="search-input" placeholder="Search movies or series..."
+                    onkeypress="handleSearchKeypress(event)">
+                <button onclick="performSearch()" class="btn-search">🔍</button>
+                <button onclick="clearSearch()" class="btn-clear">✖</button>
+            </div>
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label>Source:</label>
+                    <select id="source-filter" onchange="filterBySource()">
+                        <option value="">All Sources</option>
+                        <option value="1flix.to">1Flix</option>
+                        <option value="goojara.to">Goojara</option>
+                        <option value="sflix.ps">Sflix</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Year:</label>
+                    <select id="year-filter" onchange="filterByYear()">
+                        <option value="">All Years</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">Total Movies</span>
+                <span class="stat-value" id="total-movies">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">With Links</span>
+                <span class="stat-value" id="movies-with-links">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Status</span>
+                <span class="stat-value" id="status-indicator">Ready</span>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-controls">
+            <button onclick="refreshAllMovies()" class="btn-refresh">🔄 Refresh All Sites</button>
+        </div>
+
+        <p id="status" class="status-message"></p>
+
+        <!-- Movies Page -->
+        <div id="movies-page" class="content-page active">
+            <h2>🎬 Available Movies</h2>
+            <div id="movie-list" class="movie-grid">
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p>Loading movies...</p>
+                </div>
+            </div>
+            <div id="load-more-movies-container" class="load-more-container">
+                <button id="load-more-movies-btn" class="load-more-btn" onclick="loadMoreMovies()">
+                    Load More Movies
+                </button>
+            </div>
+        </div>
+
+        <!-- Series Page -->
+        <div id="series-page" class="content-page">
+            <h2>📺 Available Series</h2>
+            <div id="series-list" class="movie-grid">
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p>Loading series...</p>
+                </div>
+            </div>
+            <div id="load-more-series-container" class="load-more-container">
+                <button id="load-more-series-btn" class="load-more-btn" onclick="loadMoreSeries()">
+                    Load More Series
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ad-Blocker Suggestion Modal -->
+    <div id="adBlockerModal" class="suggestion-modal">
+        <div class="suggestion-modal-content">
+            <button class="suggestion-close" onclick="closeAdBlockerSuggestion()">&times;</button>
+            <h2 class="suggestion-title">Please use ad blocker or use Brave browser for ads free experiences</h2>
+            <div class="suggestion-actions">
+                <a href="https://brave.com" target="_blank" rel="noopener" class="suggestion-btn brave-btn">
+                    <span class="btn-icon">🦁</span>
+                    <span class="btn-text">
+                        <strong>Brave Browser</strong>
+                        <small>Built-in ad blocking</small>
+                    </span>
+                </a>
+                <a href="https://ublockorigin.com" target="_blank" rel="noopener" class="suggestion-btn ublock-btn">
+                    <span class="btn-icon">🛡️</span>
+                    <span class="btn-text">
+                        <strong>uBlock Origin</strong>
+                        <small>Best ad blocker extension</small>
+                    </span>
+                </a>
+            </div>
+            <button class="suggestion-dismiss" onclick="closeAdBlockerSuggestion()">Maybe later</button>
+        </div>
+    </div>
+
+    <!-- Movie Watch Modal -->
+    <div id="watchModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeWatchModal()">&times;</span>
+            <h2 id="modal-title"></h2>
+            <p id="modal-synopsis" class="synopsis"></p>
+
+            <div class="player-container">
+                <div id="iframe-loading" class="loading-overlay">
+                    <div class="loading-spinner"></div>
+                    <p>Loading player...</p>
+                </div>
+                <div id="player-error" class="error-message" style="display: none;">
+                    ⚠️ Unable to load video. Try another server.
+                </div>
+                <iframe id="embed-player" allowfullscreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+            </div>
+
+            <div class="server-section">
+                <h3>Available Servers:</h3>
+                <ul id="server-list" class="server-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Series Modal -->
+    <div id="seriesModal" class="modal">
+        <div class="modal-content">
+            <span class="close-series" onclick="closeSeriesModal()">&times;</span>
+            <h2 id="series-modal-title"></h2>
+
+            <div class="episode-selector">
+                <div class="select-group">
+                    <label>Season:</label>
+                    <select id="season-select"></select>
+                </div>
+                <div class="select-group">
+                    <label>Episode:</label>
+                    <select id="episode-select"></select>
+                </div>
+                <button onclick="playSelectedEpisode()" class="btn-play-episode">
+                    ▶️ Play Episode
+                </button>
+            </div>
+
+            <div class="player-container">
+                <div id="series-iframe-loading" class="loading-overlay">
+                    <div class="loading-spinner"></div>
+                    <p>Loading player...</p>
+                </div>
+                <div id="series-player-error" class="error-message" style="display: none;">
+                    ⚠️ Unable to load video. Try another server.
+                </div>
+                <iframe id="series-embed-player" allowfullscreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+            </div>
+
+            <div class="server-section">
+                <h3>Available Servers:</h3>
+                <ul id="series-server-list" class="server-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
